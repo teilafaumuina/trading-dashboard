@@ -1,0 +1,23 @@
+{
+  "symbols":  { "AAPL": { "pnl": 150, "trades": 3, "wins": 2 } },
+  "weekdays": { "Monday": { "pnl": 50,  "trades": 1 },
+                "Tuesday":{ "pnl": 100, "trades": 2 } },
+  "hours":    { "9": { "pnl":  80, "trades": 2 },
+                "10":{ "pnl":  70, "trades": 1 } },
+  "equityTrades":[
+      { "trade":0,"equity":50000,"date":"Start","pnl":0 },
+      { "trade":1,"equity":50100,"date":"2025-07-01","pnl":100 },
+      { "trade":2,"equity":50150,"date":"2025-07-02","pnl": 50 }
+  ],
+  "equityDays":[
+      { "day":0,"equity":50000,"date":"Start","pnl":0 },
+      { "day":1,"equity":50100,"date":"2025-07-01","pnl":100 },
+      { "day":2,"equity":50150,"date":"2025-07-02","pnl": 50 }
+  ],
+  "calendar":{ "2025-6":{ "1":{ "pnl":100,"trades":1 },
+                          "2":{ "pnl": 50,"trades":2 } } },
+  "trades":[
+      { "trade_id":"T-1","date":"2025-07-01","symbol":"AAPL","side":"BUY","p_l":100 },
+      { "trade_id":"T-2","date":"2025-07-02","symbol":"AAPL","side":"SELL","p_l": 50 }
+  ]
+}
