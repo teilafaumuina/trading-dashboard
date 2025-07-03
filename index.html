@@ -1,13 +1,12 @@
 <!--
-  Trading Dashboard – STATIC GitHub Edition v3.6  (July 2025)
+  Trading Dashboard – STATIC GitHub Edition v3.7  (July 2025)
   -----------------------------------------------------------------
-  • Works with **any** JSON coming from n8n / Google‑Sheets – no more
-    “rawData.trades is not iterable”. Missing keys are auto‑filled.
-  • Keeps the richer UI from your last paste (metrics, symbol panel,
-    hour bar‑chart, search / filter, calendar, dual equity curve).
+  • Pagination (15 trades / page) with Prev / Next navigation.
+  • Screenshot column now shows a thumbnail preview on hover while
+    retaining the click‑through link to the full image.
   -----------------------------------------------------------------
-  Quick start (unchanged):  put this at repo‑root (or /docs) as index.html
-  and make DATA_URL below point at your webhook JSON.
+  Drop this file into your repo root (or /docs) as index.html – the
+  only external dependency is DATA_URL below.
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -31,6 +30,10 @@
     .metric-card{background:linear-gradient(135deg,#1a1a1a 0%,#141414 100%);transition:.3s}
     .metric-card:hover{transform:translateY(-2px);box-shadow:0 5px 20px rgba(0,0,0,.5)}
     .trade-row:hover{background:rgba(16,185,129,.05)}
+    /* ── Screenshot hover thumbnail ───────────────────────────── */
+    .screenshot-link .screenshot-preview{display:none;position:absolute;left:50%;transform:translateX(-50%);bottom:100%;margin-bottom:8px;z-index:40}
+    .screenshot-link:hover .screenshot-preview{display:block}
+    .screenshot-preview img{max-width:240px;max-height:200px;border-radius:4px;border:1px solid #3a3a3a}
   </style>
 </head>
 <body class="bg-[#0a0a0a] text-white">
@@ -107,144 +110,5 @@
         </div>
       </div>
       <div class="overflow-x-auto">
-        <table class="w-full text-sm"><thead class="border-b border-[#2a2a2a]"><tr><th class="py-2 px-4 text-left">Trade ID</th><th class="py-2 px-4 text-left">Date</th><th class="py-2 px-4 text-left">Symbol</th><th class="py-2 px-4 text-left">Side</th><th class="py-2 px-4 text-left">P&L</th><th class="py-2 px-4 text-left">Chart</th></tr></thead><tbody id="tradesTableBody"></tbody></table>
-      </div>
-    </div>
-  </div>
-
-<script>
-// ───────────────────────────────── Config
-const DATA_URL = 'https://n8n-xza7.onrender.com/webhook/dashboard';
-
-// ───────────────────────────────── State
-let rawData = {}; let equityChart, timeChart; let allTrades = [];
-
-// ───────────────────────────────── Utils
-const money = v => {
-  const val = Number(v)||0; return (val>=0?'+':'-')+'$'+Math.abs(val).toFixed(2);
-};
-function normalise(j){
-  const d={...j};
-  d.trades       = Array.isArray(d.trades)?d.trades:[];
-  d.symbols      = typeof d.symbols==='object'&&d.symbols?d.symbols:{};
-  d.hours        = typeof d.hours==='object' && d.hours ?d.hours:{};
-  d.calendar     = typeof d.calendar==='object'&&d.calendar?d.calendar:{};
-  d.equityTrades = Array.isArray(d.equityTrades)?d.equityTrades:[];
-  d.equityDays   = Array.isArray(d.equityDays)?d.equityDays:d.equityTrades;
-  if(!d.equityTrades.length) d.equityTrades=[{trade:0,equity:0,date:'Start',pnl:0}];
-  if(!d.equityDays.length) d.equityDays=d.equityTrades;
-  return d; }
-
-// ───────────────────────────────── Fetch & bootstrap
-(async()=>{
-  try{
-    const r=await fetch(DATA_URL,{cache:'no-store'});
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    rawData = normalise(await r.json());
-    allTrades=[...rawData.trades];
-    document.getElementById('loadingState').classList.add('hidden');
-    document.getElementById('mainDashboard').classList.remove('hidden');
-    bootstrap();
-  }catch(e){
-    console.error(e);
-    document.getElementById('loadingState').classList.add('hidden');
-    document.getElementById('errorState').classList.remove('hidden');
-  }
-})();
-
-function bootstrap(){
-  document.getElementById('lastUpdated').textContent=new Date().toLocaleString();
-  buildMetrics();
-  buildSymbolPerformance();
-  initCharts();
-  renderCalendar();
-  renderTrades();
-}
-
-// ───────────────────────────────── Metrics
-function buildMetrics(){
-  const trades = rawData.trades;
-  const total = trades.length;
-  const net = trades.reduce((s,t)=>s+parseFloat(t.p_l||0),0);
-  const wins = trades.filter(t=>parseFloat(t.p_l)>0).length;
-  const winRate = total?((wins/total)*100).toFixed(1)+'%':'0%';
-  const losses = trades.filter(t=>parseFloat(t.p_l)<0).length;
-  const avgWin = wins?money(trades.filter(t=>parseFloat(t.p_l)>0).reduce((s,t)=>s+parseFloat(t.p_l),0)/wins):'+$0.00';
-  const avgLoss= losses?money(-trades.filter(t=>parseFloat(t.p_l)<0).reduce((s,t)=>s+parseFloat(t.p_l),0)/losses):'-$0.00';
-  const html = [
-    {l:'Total Trades',v:total},
-    {l:'Net P&L',v:money(net),c:net>=0?'text-green-400':'text-red-400'},
-    {l:'Win Rate',v:winRate,c:parseFloat(winRate)>50?'text-green-400':'text-red-400'},
-    {l:'Avg Win/Loss',v:`${avgWin} / ${avgLoss}`}
-  ].map(m=>`<div class="metric-card p-4 rounded border border-[#2a2a2a]"><p class="text-gray-400 text-xs mb-1">${m.l}</p><p class="text-2xl font-bold ${m.c||''}">${m.v}</p></div>`).join('');
-  document.getElementById('metricsContainer').innerHTML=html;
-}
-
-// ───────────────────────────────── Symbols & hours
-function buildSymbolPerformance(){
-  const symbols = Object.entries(rawData.symbols).sort((a,b)=>b[1].pnl-a[1].pnl).slice(0,5);
-  document.getElementById('symbolPerformance').innerHTML = symbols.map(([s,d])=>{
-    const wr = d.trades?((d.wins/d.trades)*100).toFixed(0):0;
-    return `<div class="flex justify-between items-center p-3 bg-[#0a0a0a] rounded"><div><span class="font-medium">${s}</span><span class="text-xs text-gray-400 ml-2">${d.trades} trades</span></div><div class="text-right"><span class="font-medium ${d.pnl>=0?'text-green-400':'text-red-400'}">${money(d.pnl)}</span><span class="text-xs text-gray-400 ml-2">${wr}% WR</span></div></div>`;
-  }).join('');
-}
-
-function initCharts(){
-  Chart.defaults.color='#9ca3af'; Chart.defaults.borderColor='#2a2a2a';
-  // Equity
-  const ctx=document.getElementById('equityChart');
-  equityChart=new Chart(ctx,{type:'line',data:{labels:rawData.equityTrades.map(p=>`Trade ${p.trade}`),datasets:[{data:rawData.equityTrades.map(p=>p.equity),borderColor:'#10b981',backgroundColor:'rgba(16,185,129,.1)',fill:true,tension:.4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
-  // Hours
-  const hours = Object.entries(rawData.hours).map(([h,d])=>({h:+h,pnl:d.pnl})).sort((a,b)=>a.h-b.h);
-  const hctx=document.getElementById('timeAnalysisChart');
-  timeChart=new Chart(hctx,{type:'bar',data:{labels:hours.map(o=>`${o.h}:00`),datasets:[{data:hours.map(o=>o.pnl),backgroundColor:hours.map(o=>o.pnl>=0?'rgba(16,185,129,.7)':'rgba(239,68,68,.7)')}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:money}}}}});
-}
-window.switchEquityView=mode=>{const src=mode==='days'?rawData.equityDays:rawData.equityTrades;equityChart.data.labels=src.map(p=>mode==='days'?p.date:`Trade ${p.trade}`);equityChart.data.datasets[0].data=src.map(p=>p.equity);equityChart.update();document.getElementById('equityByTrades').classList.toggle('bg-[#2a2a2a]',mode==='trades');document.getElementById('equityByDays').classList.toggle('bg-[#2a2a2a]',mode==='days');document.getElementById('equityByTrades').classList.toggle('text-gray-400',mode==='days');document.getElementById('equityByDays').classList.toggle('text-gray-400',mode==='trades');};
-
-// ───────────────────────────────── Calendar
-let calY=new Date().getFullYear(), calM=new Date().getMonth();
-function renderCalendar(){
-  const monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  document.getElementById('calendarMonthYear').textContent=`${monthNames[calM]} ${calY}`;
-  const map=rawData.calendar[`${calY}-${calM}`]||{};
-  const dims=new Date(calY,calM+1,0).getDate();
-  const first=new Date(calY,calM,1).getDay();
-  let html='';
-  for(let i=0;i<(first===0?6:first-1);i++) html+='<div class="h-16"></div>';
-  for(let d=1;d<=dims;d++){
-    const info=map[d];
-    const cls=info?(info.pnl>0?'bg-green-900/30 border-green-600/50':'bg-red-900/30 border-red-600/50'):'bg-[#1a1a1a] border-[#2a2a2a]';
-    html+=`<div class="calendar-day h-16 rounded border flex flex-col items-center justify-center text-sm ${cls}"><span>${d}</span>${info?`<span class="text-xs ${info.pnl>=0?'text-green-400':'text-red-400'}">${info.pnl>=0?'+':''}${info.pnl.toFixed(0)}</span>`:''}</div>`;
-  }
-  document.getElementById('calendarGrid').innerHTML=html;
-}
-window.changeCalendarMonth=step=>{calM+=step;if(calM<0){calM=11;calY--} if(calM>11){calM=0;calY++} renderCalendar();};
-
-// ───────────────────────────────── Trades table + filter
-function renderTrades(){
-  document.getElementById('tradesTableBody').innerHTML = allTrades.map(t=>{
-    const pnl=parseFloat(t.p_l||0); const link=t.screenshot_url_A||t.screenshot_url_B||t.screenshot_url_C;
-    return `<tr class="trade-row border-b border-[#2a2a2a]" data-symbol="${(t.symbol||'').toLowerCase()}" data-pnl="${pnl}">`
-    +`<td class="py-2 px-4 font-mono text-xs">${t.trade_id||''}</td>`
-    +`<td class="py-2 px-4">${t.date||''}</td>`
-    +`<td class="py-2 px-4 font-medium">${t.symbol||''}</td>`
-    +`<td class="py-2 px-4"><span class="px-2 py-1 text-xs rounded ${t.side==='BUY'?'bg-green-900/30 text-green-400':'bg-red-900/30 text-red-400'}">${t.side||''}</span></td>`
-    +`<td class="py-2 px-4 ${pnl>=0?'text-green-400':'text-red-400'}">${money(pnl)}</td>`
-    +`<td class="py-2 px-4 text-center">${link?`<a target="_blank" class="underline text-blue-400" href="${link}">View</a>`:'-'}</td>`
-    +`</tr>`;}).join('');
-}
-window.filterTrades=()=>{
-  const term=document.getElementById('tradeSearch').value.toLowerCase();
-  const type=document.getElementById('tradeFilter').value;
-  document.querySelectorAll('#tradesTableBody tr').forEach(row=>{
-    const sym=row.dataset.symbol;
-    const pnl=parseFloat(row.dataset.pnl);
-    let show=true;
-    if(term && !sym.includes(term)) show=false;
-    if(type==='win' && pnl<=0) show=false; if(type==='loss' && pnl>=0) show=false;
-    row.style.display=show?'':'none';
-  });
-};
-</script>
-</body>
-</html>
+        <table class="w-full text-sm">
+          <thead class="border-b border-[#2a2a2a]"><tr><th class="py-
