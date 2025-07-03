@@ -23,15 +23,11 @@
     .chart-container{position:relative;height:350px;width:100%}
     .calendar-day{position:relative;transition:.2s;cursor:pointer}
     .calendar-day:hover{transform:scale(1.05);z-index:10;box-shadow:0 0 20px rgba(16,185,129,.3)}
-    /* custom scrollbar */
     ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-track{background:#1a1a1a}::-webkit-scrollbar-thumb{background:#3a3a3a;border-radius:4px}::-webkit-scrollbar-thumb:hover{background:#4a4a4a}
     .loading-spinner{border:3px solid #1a1a1a;border-top:3px solid #10b981;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite}@keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
     .metric-card{background:#1a1a1a;border:1px solid #2a2a2a;transition:.3s}.metric-card:hover{transform:translateY(-2px);border-color:#3a3a3a}
     .trade-row:hover{background:rgba(16,185,129,.05)}
-    /* hover screenshot */
-    .shot-wrap{position:relative;display:inline-block}
-    .shot-preview{display:none;position:absolute;bottom:125%;left:50%;transform:translateX(-50%);background:#000;padding:4px;border:1px solid #333;border-radius:4px;z-index:60;max-width:300px;max-height:180px}
-    .shot-wrap:hover .shot-preview{display:block}
+    .shot-wrap{position:relative;display:inline-block}.shot-preview{display:none;position:absolute;bottom:125%;left:50%;transform:translateX(-50%);background:#000;padding:4px;border:1px solid #333;border-radius:4px;z-index:60;max-width:300px;max-height:180px}.shot-wrap:hover .shot-preview{display:block}
   </style>
 </head>
 <body class="bg-[#0a0a0a] text-white">
@@ -59,7 +55,7 @@
     <!-- Key metrics cards -->
     <div id="metricsContainer" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8"></div>
 
-    <!-- Equity curve (matches n8n placement) -->
+    <!-- Equity curve -->
     <div class="bg-[#1a1a1a] p-6 rounded border border-[#2a2a2a] mb-8">
       <div class="flex justify-between mb-4">
         <h2 class="text-lg font-semibold">Equity Curve</h2>
@@ -71,7 +67,7 @@
       <div class="chart-container" style="height:400px"><canvas id="equityChart"></canvas></div>
     </div>
 
-    <!-- Calendar & Evaluation side‑by‑side -->
+    <!-- Calendar & Evaluation -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
       <div class="lg:col-span-2 bg-[#1a1a1a] p-6 rounded border border-[#2a2a2a]">
         <div class="flex justify-between items-center mb-4 text-sm">
@@ -85,23 +81,14 @@
       <div id="evaluationPanel" class="bg-[#1a1a1a] p-6 rounded border border-[#2a2a2a]"></div>
     </div>
 
-    <!-- Performance row (Instrument bar + Weekday bar + Hour bar) -->
+    <!-- Performance row -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-      <div class="bg-[#1a1a1a] p-6 rounded border border-[#2a2a2a] lg:col-span-1">
-        <h2 class="text-lg font-semibold mb-4">Performance by Instrument</h2>
-        <div class="chart-container h-64"><canvas id="symbolChart"></canvas></div>
-      </div>
-      <div class="bg-[#1a1a1a] p-6 rounded border border-[#2a2a2a] lg:col-span-1">
-        <h2 class="text-lg font-semibold mb-4">Performance by Weekday</h2>
-        <div class="chart-container h-64"><canvas id="weekdayChart"></canvas></div>
-      </div>
-      <div class="bg-[#1a1a1a] p-6 rounded border border-[#2a2a2a] lg:col-span-1">
-        <h2 class="text-lg font-semibold mb-4">Performance by Hour</h2>
-        <div class="chart-container h-64"><canvas id="hourChart"></canvas></div>
-      </div>
+      <div class="bg-[#1a1a1a] p-6 rounded border border-[#2a2a2a]"><h2 class="text-lg font-semibold mb-4">Performance by Instrument</h2><div class="chart-container h-64"><canvas id="symbolChart"></canvas></div></div>
+      <div class="bg-[#1a1a1a] p-6 rounded border border-[#2a2a2a]"><h2 class="text-lg font-semibold mb-4">Performance by Weekday</h2><div class="chart-container h-64"><canvas id="weekdayChart"></canvas></div></div>
+      <div class="bg-[#1a1a1a] p-6 rounded border border-[#2a2a2a]"><h2 class="text-lg font-semibold mb-4">Performance by Hour</h2><div class="chart-container h-64"><canvas id="hourChart"></canvas></div></div>
     </div>
 
-    <!-- Key insights -->
+    <!-- Insights -->
     <div id="insightsBox" class="hidden bg-[#1a1a1a] p-6 rounded border border-[#2a2a2a] mb-8"></div>
 
     <!-- Trades table -->
@@ -119,4 +106,26 @@
           <tbody id="tradesTableBody"></tbody>
         </table>
       </div>
-      <div class="flex justify-between items-center mt-4 text-sm text-gray-400"><button id="prevPage" class="px-3 py-1 bg-[#2a2a2a] rounded disabled:opacity-30" onclick="changePage(-1)">← Prev</button><span id="pageInfo"></span><button id
+      <div class="flex justify-between items-center mt-4 text-sm text-gray-400"><button id="prevPage" class="px-3 py-1 bg-[#2a2a2a] rounded disabled:opacity-30" onclick="changePage(-1)">← Prev</button><span id="pageInfo"></span><button id="nextPage" class="px-3 py-1 bg-[#2a2a2a] rounded disabled:opacity-30" onclick="changePage(1)">Next →</button></div>
+    </div>
+  </div>
+
+<script>
+// ------------------------------------------------------------------
+// CONFIG
+// ------------------------------------------------------------------
+const DATA_URL = 'https://n8n-xza7.onrender.com/webhook/dashboard'; // ← live data source
+const TRADES_PER_PAGE = 15;
+
+// ------------------------------------------------------------------
+// State vars
+// ------------------------------------------------------------------
+let rawData = {};let equityChart,timeChart;let allTrades=[];let currentPage=1;
+
+// ------------------------------------------------------------------
+// Boot
+// ------------------------------------------------------------------
+document.addEventListener('DOMContentLoaded',()=>{fetchData();});
+
+async function fetchData(){try{
+  const r = await fetch(DATA
