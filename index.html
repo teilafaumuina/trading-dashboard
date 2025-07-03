@@ -1,9 +1,8 @@
 <!--
-  Trading Dashboard – STATIC GitHub Edition v3.7  (July 2025)
+  Trading Dashboard – STATIC GitHub Edition v3.8  (July 2025)
   -----------------------------------------------------------------
-  • Pagination (15 trades / page) with Prev / Next navigation.
-  • Screenshot column now shows a thumbnail preview on hover while
-    retaining the click‑through link to the full image.
+  • Pagination (15 trades / page) with Prev / Next navigation + live counter.
+  • Screenshot column shows thumbnail preview on hover while retaining link.
   -----------------------------------------------------------------
   Drop this file into your repo root (or /docs) as index.html – the
   only external dependency is DATA_URL below.
@@ -31,7 +30,8 @@
     .metric-card:hover{transform:translateY(-2px);box-shadow:0 5px 20px rgba(0,0,0,.5)}
     .trade-row:hover{background:rgba(16,185,129,.05)}
     /* ── Screenshot hover thumbnail ───────────────────────────── */
-    .screenshot-link .screenshot-preview{display:none;position:absolute;left:50%;transform:translateX(-50%);bottom:100%;margin-bottom:8px;z-index:40}
+    .screenshot-link{position:relative;display:inline-block}
+    .screenshot-preview{display:none;position:absolute;left:50%;transform:translateX(-50%);bottom:110%;z-index:50}
     .screenshot-link:hover .screenshot-preview{display:block}
     .screenshot-preview img{max-width:240px;max-height:200px;border-radius:4px;border:1px solid #3a3a3a}
   </style>
@@ -111,4 +111,34 @@
       </div>
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
-          <thead class="border-b border-[#2a2a2a]"><tr><th class="py-
+          <thead class="border-b border-[#2a2a2a]"><tr>
+            <th class="py-2 px-4 text-left">Trade ID</th><th class="py-2 px-4 text-left">Date</th><th class="py-2 px-4 text-left">Symbol</th><th class="py-2 px-4 text-left">Side</th><th class="py-2 px-4 text-left">P&L</th><th class="py-2 px-4 text-left">Chart</th>
+          </tr></thead>
+          <tbody id="tradesTableBody"></tbody>
+        </table>
+      </div>
+      <!-- Pagination -->
+      <div class="flex justify-between items-center mt-4 text-sm text-gray-400">
+        <div>Showing <span id="pageFrom"></span>‑<span id="pageTo"></span> of <span id="pageTotal"></span></div>
+        <div class="space-x-2">
+          <button id="prevPage" class="px-3 py-1 bg-[#2a2a2a] rounded disabled:opacity-40" onclick="changePage(-1)">Prev</button>
+          <button id="nextPage" class="px-3 py-1 bg-[#2a2a2a] rounded disabled:opacity-40" onclick="changePage(1)">Next</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+// ───────────────────────────────── Config
+const DATA_URL = 'https://n8n-xza7.onrender.com/webhook/dashboard';
+const TRADES_PER_PAGE = 15;
+
+// ───────────────────────────────── State
+let rawData = {}; let equityChart, timeChart; let allTrades = [];
+let currentPage=1, totalPages=1;
+
+// ───────────────────────────────── Utils
+const money = v =>{
+  const val=Number(v)||0;return (val>=0?'+':'-')+'$'+Math.abs(val).toFixed(2)};
+function normalise(j){
+  const d={...
