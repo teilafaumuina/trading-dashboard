@@ -1,13 +1,11 @@
 <!--
-  Trading Dashboard – STATIC GitHub Edition v3.6  (July 2025)
+  Trading Dashboard – GitHub Edition v3.8  (July 2025)
   -----------------------------------------------------------------
-  • Works with **any** JSON coming from n8n / Google‑Sheets – no more
-    “rawData.trades is not iterable”. Missing keys are auto‑filled.
-  • Keeps the richer UI from your last paste (metrics, symbol panel,
-    hour bar‑chart, search / filter, calendar, dual equity curve).
+  • 100% layout parity with your working n8n HTML (screenshot 2025‑07‑03)
+  • Hover‑preview screenshots  + click‑through
+  • 15‑row paginated trade table
   -----------------------------------------------------------------
-  Quick start (unchanged):  put this at repo‑root (or /docs) as index.html
-  and make DATA_URL below point at your webhook JSON.
+  Drop this file at repo‑root (or /docs) and set DATA_URL below.
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -16,7 +14,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Trading Dashboard</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>"/>
-  <!-- CDN build is fine for GitHub Pages – the console warning is safe to ignore -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
@@ -26,11 +23,15 @@
     .chart-container{position:relative;height:350px;width:100%}
     .calendar-day{position:relative;transition:.2s;cursor:pointer}
     .calendar-day:hover{transform:scale(1.05);z-index:10;box-shadow:0 0 20px rgba(16,185,129,.3)}
+    /* custom scrollbar */
     ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-track{background:#1a1a1a}::-webkit-scrollbar-thumb{background:#3a3a3a;border-radius:4px}::-webkit-scrollbar-thumb:hover{background:#4a4a4a}
     .loading-spinner{border:3px solid #1a1a1a;border-top:3px solid #10b981;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite}@keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
-    .metric-card{background:linear-gradient(135deg,#1a1a1a 0%,#141414 100%);transition:.3s}
-    .metric-card:hover{transform:translateY(-2px);box-shadow:0 5px 20px rgba(0,0,0,.5)}
+    .metric-card{background:#1a1a1a;border:1px solid #2a2a2a;transition:.3s}.metric-card:hover{transform:translateY(-2px);border-color:#3a3a3a}
     .trade-row:hover{background:rgba(16,185,129,.05)}
+    /* hover screenshot */
+    .shot-wrap{position:relative;display:inline-block}
+    .shot-preview{display:none;position:absolute;bottom:125%;left:50%;transform:translateX(-50%);background:#000;padding:4px;border:1px solid #333;border-radius:4px;z-index:60;max-width:300px;max-height:180px}
+    .shot-wrap:hover .shot-preview{display:block}
   </style>
 </head>
 <body class="bg-[#0a0a0a] text-white">
@@ -49,202 +50,73 @@
 
   <!-- Main UI -->
   <div id="mainDashboard" class="hidden min-h-screen p-4 md:p-6 max-w-7xl mx-auto">
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-8">
-      <h1 class="text-3xl font-bold flex items-center">Trading Dashboard <span class="w-3 h-3 bg-green-400 rounded-full ml-3 animate-pulse"></span></h1>
-      <div class="text-sm text-gray-400">Last updated <span id="lastUpdated"></span></div>
+    <!-- Title & barrel‑stats row -->
+    <div class="mb-6">
+      <h1 class="text-3xl font-bold flex items-center mb-3">Trading Dashboard <span class="w-3 h-3 bg-green-400 rounded-full ml-3 animate-pulse"></span></h1>
+      <div id="headerStats" class="flex flex-wrap items-center space-x-3 text-sm text-gray-400"></div>
     </div>
 
-    <!-- Metrics -->
-    <div id="metricsContainer" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"></div>
+    <!-- Key metrics cards -->
+    <div id="metricsContainer" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8"></div>
 
-    <!-- Performance blocks -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-      <div class="bg-[#1a1a1a] p-6 rounded border border-[#2a2a2a]">
-        <h2 class="text-lg font-semibold mb-4">Top Performing Symbols</h2>
-        <div id="symbolPerformance" class="space-y-2"></div>
-      </div>
-      <div class="bg-[#1a1a1a] p-6 rounded border border-[#2a2a2a]">
-        <h2 class="text-lg font-semibold mb-4">Best Trading Hours</h2>
-        <div class="chart-container h-64"><canvas id="timeAnalysisChart"></canvas></div>
-      </div>
-    </div>
-
-    <!-- Equity -->
+    <!-- Equity curve (matches n8n placement) -->
     <div class="bg-[#1a1a1a] p-6 rounded border border-[#2a2a2a] mb-8">
       <div class="flex justify-between mb-4">
         <h2 class="text-lg font-semibold">Equity Curve</h2>
-        <div class="space-x-2">
-          <button id="equityByTrades" class="px-3 py-1 text-sm rounded bg-[#2a2a2a]" onclick="switchEquityView('trades')">By Trades</button>
-          <button id="equityByDays"   class="px-3 py-1 text-sm rounded bg-[#1a1a1a] text-gray-400" onclick="switchEquityView('days')">By Days</button>
+        <div class="space-x-2 text-sm">
+          <button id="equityByTrades" class="px-3 py-1 rounded bg-[#2a2a2a]" onclick="switchEquityView('trades')">By Trades</button>
+          <button id="equityByDays"   class="px-3 py-1 rounded bg-[#1a1a1a] text-gray-400" onclick="switchEquityView('days')">By Days</button>
         </div>
       </div>
-      <div class="chart-container"><canvas id="equityChart"></canvas></div>
+      <div class="chart-container" style="height:400px"><canvas id="equityChart"></canvas></div>
     </div>
 
-    <!-- Calendar -->
-    <div class="bg-[#1a1a1a] p-6 rounded border border-[#2a2a2a] mb-8">
-      <div class="flex justify-between items-center mb-4">
-        <button onclick="changeCalendarMonth(-1)" class="p-2 hover:bg-[#2a2a2a] rounded">◀</button>
-        <span id="calendarMonthYear" class="text-sm text-gray-400"></span>
-        <button onclick="changeCalendarMonth(1)" class="p-2 hover:bg-[#2a2a2a] rounded">▶</button>
+    <!-- Calendar & Evaluation side‑by‑side -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <div class="lg:col-span-2 bg-[#1a1a1a] p-6 rounded border border-[#2a2a2a]">
+        <div class="flex justify-between items-center mb-4 text-sm">
+          <button onclick="changeCalendarMonth(-1)" class="p-2 hover:bg-[#2a2a2a] rounded">◀</button>
+          <span id="calendarMonthYear" class="text-gray-400"></span>
+          <button onclick="changeCalendarMonth(1)" class="p-2 hover:bg-[#2a2a2a] rounded">▶</button>
+        </div>
+        <div class="grid grid-cols-7 gap-2 text-center text-gray-500 text-xs mb-2"><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div></div>
+        <div id="calendarGrid" class="grid grid-cols-7 gap-2"></div>
       </div>
-      <div class="grid grid-cols-7 gap-2 text-center text-gray-500 text-xs mb-2">
-        <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
-      </div>
-      <div id="calendarGrid" class="grid grid-cols-7 gap-2"></div>
+      <div id="evaluationPanel" class="bg-[#1a1a1a] p-6 rounded border border-[#2a2a2a]"></div>
     </div>
 
-    <!-- Trades -->
+    <!-- Performance row (Instrument bar + Weekday bar + Hour bar) -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <div class="bg-[#1a1a1a] p-6 rounded border border-[#2a2a2a] lg:col-span-1">
+        <h2 class="text-lg font-semibold mb-4">Performance by Instrument</h2>
+        <div class="chart-container h-64"><canvas id="symbolChart"></canvas></div>
+      </div>
+      <div class="bg-[#1a1a1a] p-6 rounded border border-[#2a2a2a] lg:col-span-1">
+        <h2 class="text-lg font-semibold mb-4">Performance by Weekday</h2>
+        <div class="chart-container h-64"><canvas id="weekdayChart"></canvas></div>
+      </div>
+      <div class="bg-[#1a1a1a] p-6 rounded border border-[#2a2a2a] lg:col-span-1">
+        <h2 class="text-lg font-semibold mb-4">Performance by Hour</h2>
+        <div class="chart-container h-64"><canvas id="hourChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Key insights -->
+    <div id="insightsBox" class="hidden bg-[#1a1a1a] p-6 rounded border border-[#2a2a2a] mb-8"></div>
+
+    <!-- Trades table -->
     <div class="bg-[#1a1a1a] p-6 rounded border border-[#2a2a2a]">
       <div class="flex justify-between items-center mb-4">
-        <h2 class="text-lg font-semibold">Trade History</h2>
+        <h2 class="text-lg font-semibold">Trade History</h2>
         <div class="flex space-x-4">
-          <input id="tradeSearch" type="text" placeholder="Search…" class="px-3 py-1 bg-[#0a0a0a] border border-[#2a2a2a] rounded text-sm" onkeyup="filterTrades()"/>
-          <select id="tradeFilter" class="px-3 py-1 bg-[#0a0a0a] border border-[#2a2a2a] rounded text-sm" onchange="filterTrades()">
-            <option value="">All</option><option value="win">Winners</option><option value="loss">Losers</option>
-          </select>
+          <input id="tradeSearch" type="text" placeholder="Search symbol…" class="px-3 py-1 bg-[#0a0a0a] border border-[#2a2a2a] rounded text-sm" onkeyup="filterTrades()"/>
+          <select id="tradeFilter" class="px-3 py-1 bg-[#0a0a0a] border border-[#2a2a2a] rounded text-sm" onchange="filterTrades()"><option value="">All</option><option value="win">Winners</option><option value="loss">Losers</option></select>
         </div>
       </div>
       <div class="overflow-x-auto">
-        <table class="w-full text-sm"><thead class="border-b border-[#2a2a2a]"><tr><th class="py-2 px-4 text-left">Trade ID</th><th class="py-2 px-4 text-left">Date</th><th class="py-2 px-4 text-left">Symbol</th><th class="py-2 px-4 text-left">Side</th><th class="py-2 px-4 text-left">P&L</th><th class="py-2 px-4 text-left">Chart</th></tr></thead><tbody id="tradesTableBody"></tbody></table>
+        <table class="w-full text-sm">
+          <thead class="border-b border-[#2a2a2a]"><tr><th class="py-2 px-4 text-left">Trade ID</th><th class="py-2 px-4 text-left">Date</th><th class="py-2 px-4 text-left">Symbol</th><th class="py-2 px-4 text-left">Side</th><th class="py-2 px-4 text-right">P&L</th><th class="py-2 px-4 text-center">Chart</th></tr></thead>
+          <tbody id="tradesTableBody"></tbody>
+        </table>
       </div>
-    </div>
-  </div>
-
-<script>
-// ───────────────────────────────── Config
-const DATA_URL = 'https://n8n-xza7.onrender.com/webhook/dashboard';
-
-// ───────────────────────────────── State
-let rawData = {}; let equityChart, timeChart; let allTrades = [];
-
-// ───────────────────────────────── Utils
-const money = v => {
-  const val = Number(v)||0; return (val>=0?'+':'-')+'$'+Math.abs(val).toFixed(2);
-};
-function normalise(j){
-  const d={...j};
-  d.trades       = Array.isArray(d.trades)?d.trades:[];
-  d.symbols      = typeof d.symbols==='object'&&d.symbols?d.symbols:{};
-  d.hours        = typeof d.hours==='object' && d.hours ?d.hours:{};
-  d.calendar     = typeof d.calendar==='object'&&d.calendar?d.calendar:{};
-  d.equityTrades = Array.isArray(d.equityTrades)?d.equityTrades:[];
-  d.equityDays   = Array.isArray(d.equityDays)?d.equityDays:d.equityTrades;
-  if(!d.equityTrades.length) d.equityTrades=[{trade:0,equity:0,date:'Start',pnl:0}];
-  if(!d.equityDays.length) d.equityDays=d.equityTrades;
-  return d; }
-
-// ───────────────────────────────── Fetch & bootstrap
-(async()=>{
-  try{
-    const r=await fetch(DATA_URL,{cache:'no-store'});
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    rawData = normalise(await r.json());
-    allTrades=[...rawData.trades];
-    document.getElementById('loadingState').classList.add('hidden');
-    document.getElementById('mainDashboard').classList.remove('hidden');
-    bootstrap();
-  }catch(e){
-    console.error(e);
-    document.getElementById('loadingState').classList.add('hidden');
-    document.getElementById('errorState').classList.remove('hidden');
-  }
-})();
-
-function bootstrap(){
-  document.getElementById('lastUpdated').textContent=new Date().toLocaleString();
-  buildMetrics();
-  buildSymbolPerformance();
-  initCharts();
-  renderCalendar();
-  renderTrades();
-}
-
-// ───────────────────────────────── Metrics
-function buildMetrics(){
-  const trades = rawData.trades;
-  const total = trades.length;
-  const net = trades.reduce((s,t)=>s+parseFloat(t.p_l||0),0);
-  const wins = trades.filter(t=>parseFloat(t.p_l)>0).length;
-  const winRate = total?((wins/total)*100).toFixed(1)+'%':'0%';
-  const losses = trades.filter(t=>parseFloat(t.p_l)<0).length;
-  const avgWin = wins?money(trades.filter(t=>parseFloat(t.p_l)>0).reduce((s,t)=>s+parseFloat(t.p_l),0)/wins):'+$0.00';
-  const avgLoss= losses?money(-trades.filter(t=>parseFloat(t.p_l)<0).reduce((s,t)=>s+parseFloat(t.p_l),0)/losses):'-$0.00';
-  const html = [
-    {l:'Total Trades',v:total},
-    {l:'Net P&L',v:money(net),c:net>=0?'text-green-400':'text-red-400'},
-    {l:'Win Rate',v:winRate,c:parseFloat(winRate)>50?'text-green-400':'text-red-400'},
-    {l:'Avg Win/Loss',v:`${avgWin} / ${avgLoss}`}
-  ].map(m=>`<div class="metric-card p-4 rounded border border-[#2a2a2a]"><p class="text-gray-400 text-xs mb-1">${m.l}</p><p class="text-2xl font-bold ${m.c||''}">${m.v}</p></div>`).join('');
-  document.getElementById('metricsContainer').innerHTML=html;
-}
-
-// ───────────────────────────────── Symbols & hours
-function buildSymbolPerformance(){
-  const symbols = Object.entries(rawData.symbols).sort((a,b)=>b[1].pnl-a[1].pnl).slice(0,5);
-  document.getElementById('symbolPerformance').innerHTML = symbols.map(([s,d])=>{
-    const wr = d.trades?((d.wins/d.trades)*100).toFixed(0):0;
-    return `<div class="flex justify-between items-center p-3 bg-[#0a0a0a] rounded"><div><span class="font-medium">${s}</span><span class="text-xs text-gray-400 ml-2">${d.trades} trades</span></div><div class="text-right"><span class="font-medium ${d.pnl>=0?'text-green-400':'text-red-400'}">${money(d.pnl)}</span><span class="text-xs text-gray-400 ml-2">${wr}% WR</span></div></div>`;
-  }).join('');
-}
-
-function initCharts(){
-  Chart.defaults.color='#9ca3af'; Chart.defaults.borderColor='#2a2a2a';
-  // Equity
-  const ctx=document.getElementById('equityChart');
-  equityChart=new Chart(ctx,{type:'line',data:{labels:rawData.equityTrades.map(p=>`Trade ${p.trade}`),datasets:[{data:rawData.equityTrades.map(p=>p.equity),borderColor:'#10b981',backgroundColor:'rgba(16,185,129,.1)',fill:true,tension:.4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
-  // Hours
-  const hours = Object.entries(rawData.hours).map(([h,d])=>({h:+h,pnl:d.pnl})).sort((a,b)=>a.h-b.h);
-  const hctx=document.getElementById('timeAnalysisChart');
-  timeChart=new Chart(hctx,{type:'bar',data:{labels:hours.map(o=>`${o.h}:00`),datasets:[{data:hours.map(o=>o.pnl),backgroundColor:hours.map(o=>o.pnl>=0?'rgba(16,185,129,.7)':'rgba(239,68,68,.7)')}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:money}}}}});
-}
-window.switchEquityView=mode=>{const src=mode==='days'?rawData.equityDays:rawData.equityTrades;equityChart.data.labels=src.map(p=>mode==='days'?p.date:`Trade ${p.trade}`);equityChart.data.datasets[0].data=src.map(p=>p.equity);equityChart.update();document.getElementById('equityByTrades').classList.toggle('bg-[#2a2a2a]',mode==='trades');document.getElementById('equityByDays').classList.toggle('bg-[#2a2a2a]',mode==='days');document.getElementById('equityByTrades').classList.toggle('text-gray-400',mode==='days');document.getElementById('equityByDays').classList.toggle('text-gray-400',mode==='trades');};
-
-// ───────────────────────────────── Calendar
-let calY=new Date().getFullYear(), calM=new Date().getMonth();
-function renderCalendar(){
-  const monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  document.getElementById('calendarMonthYear').textContent=`${monthNames[calM]} ${calY}`;
-  const map=rawData.calendar[`${calY}-${calM}`]||{};
-  const dims=new Date(calY,calM+1,0).getDate();
-  const first=new Date(calY,calM,1).getDay();
-  let html='';
-  for(let i=0;i<(first===0?6:first-1);i++) html+='<div class="h-16"></div>';
-  for(let d=1;d<=dims;d++){
-    const info=map[d];
-    const cls=info?(info.pnl>0?'bg-green-900/30 border-green-600/50':'bg-red-900/30 border-red-600/50'):'bg-[#1a1a1a] border-[#2a2a2a]';
-    html+=`<div class="calendar-day h-16 rounded border flex flex-col items-center justify-center text-sm ${cls}"><span>${d}</span>${info?`<span class="text-xs ${info.pnl>=0?'text-green-400':'text-red-400'}">${info.pnl>=0?'+':''}${info.pnl.toFixed(0)}</span>`:''}</div>`;
-  }
-  document.getElementById('calendarGrid').innerHTML=html;
-}
-window.changeCalendarMonth=step=>{calM+=step;if(calM<0){calM=11;calY--} if(calM>11){calM=0;calY++} renderCalendar();};
-
-// ───────────────────────────────── Trades table + filter
-function renderTrades(){
-  document.getElementById('tradesTableBody').innerHTML = allTrades.map(t=>{
-    const pnl=parseFloat(t.p_l||0); const link=t.screenshot_url_A||t.screenshot_url_B||t.screenshot_url_C;
-    return `<tr class="trade-row border-b border-[#2a2a2a]" data-symbol="${(t.symbol||'').toLowerCase()}" data-pnl="${pnl}">`
-    +`<td class="py-2 px-4 font-mono text-xs">${t.trade_id||''}</td>`
-    +`<td class="py-2 px-4">${t.date||''}</td>`
-    +`<td class="py-2 px-4 font-medium">${t.symbol||''}</td>`
-    +`<td class="py-2 px-4"><span class="px-2 py-1 text-xs rounded ${t.side==='BUY'?'bg-green-900/30 text-green-400':'bg-red-900/30 text-red-400'}">${t.side||''}</span></td>`
-    +`<td class="py-2 px-4 ${pnl>=0?'text-green-400':'text-red-400'}">${money(pnl)}</td>`
-    +`<td class="py-2 px-4 text-center">${link?`<a target="_blank" class="underline text-blue-400" href="${link}">View</a>`:'-'}</td>`
-    +`</tr>`;}).join('');
-}
-window.filterTrades=()=>{
-  const term=document.getElementById('tradeSearch').value.toLowerCase();
-  const type=document.getElementById('tradeFilter').value;
-  document.querySelectorAll('#tradesTableBody tr').forEach(row=>{
-    const sym=row.dataset.symbol;
-    const pnl=parseFloat(row.dataset.pnl);
-    let show=true;
-    if(term && !sym.includes(term)) show=false;
-    if(type==='win' && pnl<=0) show=false; if(type==='loss' && pnl>=0) show=false;
-    row.style.display=show?'':'none';
-  });
-};
-</script>
-</body>
-</html>
+      <div class="flex justify-between items-center mt-4 text-sm text-gray-400"><button id="prevPage" class="px-3 py-1 bg-[#2a2a2a] rounded disabled:opacity-30" onclick="changePage(-1)">← Prev</button><span id="pageInfo"></span><button id
