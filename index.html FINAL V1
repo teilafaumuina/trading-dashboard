@@ -125,6 +125,7 @@
       border-radius: 8px;
       padding: 8px;
       box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+      pointer-events: none;
     }
     
     .screenshot-link:hover .screenshot-preview {
@@ -133,9 +134,20 @@
     }
     
     .screenshot-preview img {
-      max-width: 300px;
-      max-height: 200px;
+      max-width: 400px;
+      max-height: 300px;
       border-radius: 4px;
+      display: block;
+    }
+    
+    /* Ensure the preview shows above everything */
+    td {
+      position: relative;
+      z-index: 1;
+    }
+    
+    td:hover {
+      z-index: 100;
     }
     
     /* Pagination buttons */
@@ -245,7 +257,7 @@
       </div>
     </div>
 
-        <!-- Performance Analysis -->
+    <!-- Performance Analysis (MOVED HERE) -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
       <!-- Symbol Performance -->
       <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a]">
@@ -393,10 +405,23 @@ function normalizeData(data) {
 // Convert Google Drive links
 function convertGoogleDriveLink(url) {
   if (!url) return null;
-  const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-  if (match && match[1]) {
-    return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+  
+  // Handle different Google Drive URL formats
+  let fileId = null;
+  
+  // Format: https://drive.google.com/file/d/FILE_ID/view
+  const match1 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (match1) fileId = match1[1];
+  
+  // Format: https://drive.google.com/open?id=FILE_ID
+  const match2 = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (match2) fileId = match2[1];
+  
+  if (fileId) {
+    // Use the direct image serving URL
+    return `https://drive.google.com/uc?export=view&id=${fileId}`;
   }
+  
   return url;
 }
 
@@ -915,7 +940,10 @@ function displayTrades(page = 1) {
                 View
               </a>
               <div class="screenshot-preview">
-                <img src="${screenshotUrl}" alt="Trade Screenshot" onerror="this.style.display='none';">
+                <img src="${screenshotUrl}" 
+                     alt="Trade Screenshot" 
+                     loading="lazy"
+                     onerror="this.parentElement.innerHTML='<span class=\\'text-red-400 text-xs\\'>Failed to load image</span>';">
               </div>
             </div>
           ` : '<span class="text-gray-500">-</span>'}
