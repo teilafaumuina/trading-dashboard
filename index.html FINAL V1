@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Trading Dashboard</title>
+  <title>Teila's Trading Dashboard</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>"/>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -186,7 +186,7 @@
     <!-- Header -->
     <div class="flex items-center justify-between mb-8">
       <h1 class="text-3xl font-bold flex items-center">
-        Trading Dashboard 
+        Teila's Trading Dashboard 
         <span class="w-3 h-3 bg-green-400 rounded-full ml-3 animate-pulse"></span>
       </h1>
       <div class="text-sm text-gray-400">
@@ -196,23 +196,6 @@
 
     <!-- Key Metrics -->
     <div id="metricsContainer" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8"></div>
-
-    <!-- Performance Analysis -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-      <!-- Symbol Performance -->
-      <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a]">
-        <h2 class="text-lg font-semibold mb-4">Top Performing Symbols</h2>
-        <div id="symbolPerformance" class="space-y-2"></div>
-      </div>
-
-      <!-- Time Analysis -->
-      <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a]">
-        <h2 class="text-lg font-semibold mb-4">Best Trading Times</h2>
-        <div class="chart-container h-64">
-          <canvas id="timeAnalysisChart"></canvas>
-        </div>
-      </div>
-    </div>
 
     <!-- Equity Curve -->
     <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a] mb-8">
@@ -259,6 +242,23 @@
       <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a]">
         <h2 class="text-lg font-semibold mb-6">Evaluation</h2>
         <div id="evaluationPanel" class="space-y-4"></div>
+      </div>
+    </div>
+
+        <!-- Performance Analysis -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <!-- Symbol Performance -->
+      <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a]">
+        <h2 class="text-lg font-semibold mb-4">Top Performing Symbols</h2>
+        <div id="symbolPerformance" class="space-y-2"></div>
+      </div>
+
+      <!-- Time Analysis -->
+      <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a]">
+        <h2 class="text-lg font-semibold mb-4">Best Trading Times</h2>
+        <div class="chart-container h-64">
+          <canvas id="timeAnalysisChart"></canvas>
+        </div>
       </div>
     </div>
 
