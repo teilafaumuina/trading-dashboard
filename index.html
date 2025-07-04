@@ -114,8 +114,8 @@
     .screenshot-preview {
       position: absolute;
       bottom: 100%;
-      left: 50%;
-      transform: translateX(-50%) translateY(-8px);
+      right: -50px;
+      transform: translateY(-8px);
       visibility: hidden;
       opacity: 0;
       transition: opacity 0.3s, visibility 0.3s;
@@ -128,6 +128,14 @@
       pointer-events: none;
     }
     
+    @media (max-width: 768px) {
+      .screenshot-preview {
+        right: auto;
+        left: 50%;
+        transform: translateX(-50%) translateY(-8px);
+      }
+    }
+    
     .screenshot-link:hover .screenshot-preview {
       visibility: visible;
       opacity: 1;
@@ -138,6 +146,18 @@
       max-height: 300px;
       border-radius: 4px;
       display: block;
+    }
+    
+    .screenshot-preview .loading-text {
+      color: #9ca3af;
+      font-size: 12px;
+      padding: 20px;
+    }
+    
+    .screenshot-preview .error-text {
+      color: #ef4444;
+      font-size: 12px;
+      padding: 20px;
     }
     
     /* Ensure the preview shows above everything */
@@ -170,6 +190,22 @@
       opacity: 0.5;
       cursor: not-allowed;
     }
+    
+    /* Mobile responsive table */
+    @media (max-width: 768px) {
+      .table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      
+      table {
+        min-width: 600px;
+      }
+      
+      .hide-mobile {
+        display: none;
+      }
+    }
   </style>
 </head>
 <body class="bg-[#0a0a0a] text-white">
@@ -196,8 +232,8 @@
   <!-- Main Dashboard -->
   <div id="mainDashboard" class="hidden min-h-screen p-4 md:p-6 max-w-7xl mx-auto">
     <!-- Header -->
-    <div class="flex items-center justify-between mb-8">
-      <h1 class="text-3xl font-bold flex items-center">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
+      <h1 class="text-2xl sm:text-3xl font-bold flex items-center">
         Teila's Trading Dashboard 
         <span class="w-3 h-3 bg-green-400 rounded-full ml-3 animate-pulse"></span>
       </h1>
@@ -211,9 +247,9 @@
 
     <!-- Equity Curve -->
     <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a] mb-8">
-      <div class="flex justify-between items-center mb-4">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
         <h2 class="text-lg font-semibold">Equity Curve</h2>
-        <div class="space-x-2">
+        <div class="flex space-x-2">
           <button id="equityByTrades" class="px-3 py-1 text-sm rounded bg-[#2a2a2a] transition-colors" onclick="switchEquityView('trades')">
             By Trades
           </button>
@@ -257,7 +293,7 @@
       </div>
     </div>
 
-    <!-- Performance Analysis (MOVED HERE) -->
+    <!-- Performance Analysis -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
       <!-- Symbol Performance -->
       <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a]">
@@ -298,21 +334,24 @@
 
     <!-- Trades Table -->
     <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a]">
-      <div class="flex justify-between items-center mb-4">
+      <div class="flex flex-col gap-4 mb-4">
         <h2 class="text-lg font-semibold">Trade History</h2>
-        <div class="flex items-center space-x-4">
-          <span id="paginationInfo" class="text-sm text-gray-400"></span>
-          <div class="flex items-center space-x-4">
+        
+        <!-- Mobile responsive controls -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <span id="paginationInfo" class="text-sm text-gray-400 order-2 sm:order-1"></span>
+          
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto order-1 sm:order-2">
             <input 
               type="text" 
               id="tradeSearch" 
               placeholder="Search trades..." 
-              class="px-3 py-1 bg-[#0a0a0a] border border-[#2a2a2a] rounded text-sm focus:outline-none focus:border-green-400"
+              class="px-3 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded text-sm focus:outline-none focus:border-green-400 w-full sm:w-auto"
               onkeyup="filterTrades()"
             />
             <select 
               id="tradeFilter" 
-              class="px-3 py-1 bg-[#0a0a0a] border border-[#2a2a2a] rounded text-sm focus:outline-none focus:border-green-400"
+              class="px-3 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded text-sm focus:outline-none focus:border-green-400 w-full sm:w-auto"
               onchange="filterTrades()"
             >
               <option value="">All Trades</option>
@@ -320,24 +359,32 @@
               <option value="loss">Losers</option>
             </select>
           </div>
-          <div class="flex space-x-2">
-            <button id="prevPage" class="pagination-btn" onclick="changePage(-1)">← Previous</button>
-            <button id="nextPage" class="pagination-btn" onclick="changePage(1)">Next →</button>
+          
+          <div class="flex gap-2 order-3 w-full sm:w-auto">
+            <button id="prevPage" class="pagination-btn flex-1 sm:flex-initial" onclick="changePage(-1)">
+              <span class="hidden sm:inline">← Previous</span>
+              <span class="sm:hidden">← Prev</span>
+            </button>
+            <button id="nextPage" class="pagination-btn flex-1 sm:flex-initial" onclick="changePage(1)">
+              <span class="hidden sm:inline">Next →</span>
+              <span class="sm:hidden">Next →</span>
+            </button>
           </div>
         </div>
       </div>
-      <div class="overflow-x-auto">
+      
+      <div class="table-container">
         <table class="w-full text-sm">
           <thead class="border-b border-[#2a2a2a]">
             <tr>
               <th class="py-3 px-4 text-left">Trade ID</th>
               <th class="py-3 px-4 text-left">Date</th>
               <th class="py-3 px-4 text-left">Symbol</th>
-              <th class="py-3 px-4 text-left">Side</th>
-              <th class="py-3 px-4 text-left">Entry</th>
-              <th class="py-3 px-4 text-left">Exit</th>
+              <th class="py-3 px-4 text-left hide-mobile">Side</th>
+              <th class="py-3 px-4 text-left hide-mobile">Entry</th>
+              <th class="py-3 px-4 text-left hide-mobile">Exit</th>
               <th class="py-3 px-4 text-right">P&L</th>
-              <th class="py-3 px-4 text-right">Balance</th>
+              <th class="py-3 px-4 text-right hide-mobile">Balance</th>
               <th class="py-3 px-4 text-center">Chart</th>
             </tr>
           </thead>
@@ -356,7 +403,7 @@ let rawData = {};
 let allTrades = [];
 let filteredTrades = [];
 let currentPage = 1;
-const tradesPerPage = 15;
+const tradesPerPage = 10; // Changed from 15 to 10
 let equityChart, timeChart, symbolChart, weekdayChart;
 
 // Utilities
@@ -372,6 +419,13 @@ function parseMoneyValue(value) {
   const cleanValue = value.toString().trim().replace(/[$,]/g, '');
   const parsed = parseFloat(cleanValue);
   return isNaN(parsed) ? 0 : parsed;
+}
+
+// Calculate net P&L including fees
+function getNetPnL(trade) {
+  const pnl = parseMoneyValue(trade.p_l || 0);
+  const fees = parseMoneyValue(trade.fees || trade.fee || 0);
+  return pnl - fees;
 }
 
 // Normalize data structure to prevent errors
@@ -391,18 +445,80 @@ function normalizeData(data) {
   normalized.calendar = typeof data.calendar === 'object' && data.calendar ? data.calendar : {};
   normalized.metadata = typeof data.metadata === 'object' && data.metadata ? data.metadata : {};
   
-  // Ensure equity data has at least one point
-  if (!normalized.equityTrades.length) {
-    normalized.equityTrades = [{ trade: 0, equity: 0, date: 'Start', pnl: 0 }];
-  }
-  if (!normalized.equityDays.length) {
-    normalized.equityDays = normalized.equityTrades;
+  // Recalculate equity curves with fees if needed
+  if (normalized.trades.length > 0) {
+    // Sort trades by date
+    const sortedTrades = [...normalized.trades].sort((a, b) => {
+      const dateA = new Date(a.date + ' ' + (a.entry_time || '00:00'));
+      const dateB = new Date(b.date + ' ' + (b.entry_time || '00:00'));
+      return dateA - dateB;
+    });
+    
+    // Calculate starting balance
+    const startingBalance = sortedTrades[0].Balance ? 
+      parseMoneyValue(sortedTrades[0].Balance) - getNetPnL(sortedTrades[0]) : 
+      parseFloat(normalized.metadata.startingBalance) || 50000;
+    
+    // Recalculate equity by trades with fees
+    normalized.equityTrades = [
+      { trade: 0, equity: startingBalance, date: 'Start', pnl: 0 }
+    ];
+    
+    let runningBalance = startingBalance;
+    sortedTrades.forEach((trade, index) => {
+      const netPnL = getNetPnL(trade);
+      runningBalance += netPnL;
+      
+      normalized.equityTrades.push({
+        trade: index + 1,
+        equity: runningBalance,
+        date: trade.date,
+        pnl: netPnL
+      });
+    });
+    
+    // Recalculate equity by days with fees
+    const dailyPnLMap = new Map();
+    sortedTrades.forEach(trade => {
+      const date = trade.date;
+      const netPnL = getNetPnL(trade);
+      if (!dailyPnLMap.has(date)) {
+        dailyPnLMap.set(date, 0);
+      }
+      dailyPnLMap.set(date, dailyPnLMap.get(date) + netPnL);
+    });
+    
+    const sortedDays = Array.from(dailyPnLMap.entries()).sort((a, b) => new Date(a[0]) - new Date(b[0]));
+    
+    normalized.equityDays = [
+      { day: 0, equity: startingBalance, date: 'Start', pnl: 0 }
+    ];
+    
+    let dailyRunningBalance = startingBalance;
+    sortedDays.forEach((entry, index) => {
+      const [date, dayPnL] = entry;
+      dailyRunningBalance += dayPnL;
+      normalized.equityDays.push({
+        day: index + 1,
+        equity: dailyRunningBalance,
+        date: date,
+        pnl: dayPnL
+      });
+    });
+  } else {
+    // Ensure equity data has at least one point
+    if (!normalized.equityTrades.length) {
+      normalized.equityTrades = [{ trade: 0, equity: 0, date: 'Start', pnl: 0 }];
+    }
+    if (!normalized.equityDays.length) {
+      normalized.equityDays = normalized.equityTrades;
+    }
   }
   
   return normalized;
 }
 
-// Convert Google Drive links
+// Enhanced Google Drive link converter with better handling
 function convertGoogleDriveLink(url) {
   if (!url) return null;
   
@@ -418,8 +534,10 @@ function convertGoogleDriveLink(url) {
   if (match2) fileId = match2[1];
   
   if (fileId) {
-    // Use the direct image serving URL
-    return `https://drive.google.com/uc?export=view&id=${fileId}`;
+    // Try multiple approaches for Google Drive images
+    // First try the direct thumbnail API which often works better
+    return `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
+    // Alternative: return `https://drive.google.com/uc?export=view&id=${fileId}`;
   }
   
   return url;
@@ -465,7 +583,7 @@ function buildMetrics() {
   const trades = rawData.trades;
   
   const totalTrades = meta.totalTrades || trades.length;
-  const netPL = parseFloat(meta.netPLAfterFees) || trades.reduce((sum, t) => sum + parseMoneyValue(t.p_l), 0);
+  const netPL = parseFloat(meta.netPLAfterFees) || trades.reduce((sum, t) => sum + getNetPnL(t), 0);
   const winRate = parseFloat(meta.winRate) || 0;
   const profitFactor = parseFloat(meta.profitFactor) || 0;
   const currentBalance = parseFloat(meta.currentBalance) || 0;
@@ -516,7 +634,7 @@ function buildMetrics() {
       <p class="text-gray-400 text-xs mb-1">${m.label}</p>
       ${m.visual === 'circle' ? `
         <div class="flex items-center justify-between">
-          <p class="text-2xl font-bold ${m.color}">${m.value}</p>
+          <p class="text-xl sm:text-2xl font-bold ${m.color}">${m.value}</p>
           <div class="w-12 h-12 relative">
             <svg class="w-12 h-12 transform -rotate-90">
               <circle cx="24" cy="24" r="20" stroke="#2a2a2a" stroke-width="4" fill="none"></circle>
@@ -529,7 +647,7 @@ function buildMetrics() {
           </div>
         </div>
       ` : `
-        <p class="text-2xl font-bold ${m.color}">${m.value}</p>
+        <p class="text-xl sm:text-2xl font-bold ${m.color}">${m.value}</p>
       `}
       ${m.subtitle ? `<p class="text-xs ${m.subtitleColor || 'text-gray-500'} mt-1">${m.subtitle}</p>` : ''}
     </div>
@@ -574,7 +692,7 @@ function buildEvaluationPanel() {
   trades.forEach(trade => {
     const date = trade.date;
     if (!dailyPnL[date]) dailyPnL[date] = 0;
-    dailyPnL[date] += parseMoneyValue(trade.p_l);
+    dailyPnL[date] += getNetPnL(trade);
   });
   
   const winningDays = Object.values(dailyPnL).filter(pnl => pnl > 0).length;
@@ -920,17 +1038,17 @@ function displayTrades(page = 1) {
         <td class="py-3 px-4 text-sm font-mono">${trade.trade_id || '-'}</td>
         <td class="py-3 px-4 text-sm text-gray-300">${trade.date || '-'}</td>
         <td class="py-3 px-4 text-sm font-medium">${trade.symbol || '-'}</td>
-        <td class="py-3 px-4 text-sm">
+        <td class="py-3 px-4 text-sm hide-mobile">
           <span class="px-2 py-1 text-xs rounded ${trade.side === 'Long' || trade.side === 'BUY' ? 'bg-green-900/30 text-green-400' : 'bg-red-900/30 text-red-400'}">
             ${trade.side || '-'}
           </span>
         </td>
-        <td class="py-3 px-4 text-sm text-gray-300">${parseFloat(trade.entry_price || 0).toFixed(2)}</td>
-        <td class="py-3 px-4 text-sm text-gray-300">${parseFloat(trade.exit_price || 0).toFixed(2)}</td>
+        <td class="py-3 px-4 text-sm text-gray-300 hide-mobile">${parseFloat(trade.entry_price || 0).toFixed(2)}</td>
+        <td class="py-3 px-4 text-sm text-gray-300 hide-mobile">${parseFloat(trade.exit_price || 0).toFixed(2)}</td>
         <td class="py-3 px-4 text-sm font-bold text-right ${pnl >= 0 ? 'text-green-400' : 'text-red-400'}">
           ${formatMoney(pnl)}
         </td>
-        <td class="py-3 px-4 text-sm text-right">
+        <td class="py-3 px-4 text-sm text-right hide-mobile">
           ${trade.Balance ? `$${parseFloat(trade.Balance).toFixed(2)}` : '-'}
         </td>
         <td class="py-3 px-4 text-sm text-center">
@@ -940,10 +1058,13 @@ function displayTrades(page = 1) {
                 View
               </a>
               <div class="screenshot-preview">
+                <div class="loading-text">Loading...</div>
                 <img src="${screenshotUrl}" 
                      alt="Trade Screenshot" 
                      loading="lazy"
-                     onerror="this.parentElement.innerHTML='<span class=\\'text-red-400 text-xs\\'>Failed to load image</span>';">
+                     style="display: none;"
+                     onload="this.style.display='block'; this.previousElementSibling.style.display='none';"
+                     onerror="this.style.display='none'; this.previousElementSibling.innerHTML='<span class=\\'error-text\\'>Unable to load image</span>';">
               </div>
             </div>
           ` : '<span class="text-gray-500">-</span>'}
