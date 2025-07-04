@@ -405,6 +405,7 @@ let filteredTrades = [];
 let currentPage = 1;
 const tradesPerPage = 10; // Changed from 15 to 10
 let equityChart, timeChart, symbolChart, weekdayChart;
+let currentEquityView = 'trades'; // Track current view
 
 // Utilities
 function formatMoney(value) {
@@ -791,8 +792,10 @@ function initCharts() {
     }
   };
   
-  // Equity Chart
+  // Equity Chart with dynamic color based on profit/loss
   const equityData = rawData.equityTrades || [];
+  const startingBalance = equityData.length > 0 ? equityData[0].equity : 50000;
+  
   equityChart = new Chart(document.getElementById('equityChart'), {
     type: 'line',
     data: {
@@ -800,12 +803,69 @@ function initCharts() {
       datasets: [{
         label: 'Balance',
         data: equityData.map(p => p.equity),
-        borderColor: '#10b981',
+        borderColor: function(context) {
+          const chart = context.chart;
+          const {ctx, chartArea} = chart;
+          
+          if (!chartArea) {
+            return '#10b981'; // Return green as default before chart is drawn
+          }
+          
+          // Create gradient
+          const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+          
+          // Calculate where the starting balance line is
+          const yScale = chart.scales.y;
+          const startingBalanceY = yScale.getPixelForValue(startingBalance);
+          const totalHeight = chartArea.bottom - chartArea.top;
+          const startingBalanceRatio = 1 - ((startingBalanceY - chartArea.top) / totalHeight);
+          
+          // Add color stops
+          gradient.addColorStop(0, '#ef4444'); // Red at bottom
+          gradient.addColorStop(Math.max(0, Math.min(1, startingBalanceRatio - 0.01)), '#ef4444'); // Red up to starting balance
+          gradient.addColorStop(Math.max(0, Math.min(1, startingBalanceRatio + 0.01)), '#10b981'); // Green above starting balance
+          gradient.addColorStop(1, '#10b981'); // Green at top
+          
+          return gradient;
+        },
         backgroundColor: 'rgba(16, 185, 129, 0.1)',
-        fill: true,
+        fill: {
+          target: {
+            value: startingBalance
+          },
+          above: 'rgba(16, 185, 129, 0.1)', // Green fill above starting balance
+          below: 'rgba(239, 68, 68, 0.1)'   // Red fill below starting balance
+        },
+        segment: {
+          borderColor: function(ctx) {
+            const prev = ctx.p0.parsed.y;
+            const next = ctx.p1.parsed.y;
+            
+            // If both points are above starting balance, green
+            if (prev >= startingBalance && next >= startingBalance) {
+              return '#10b981';
+            }
+            // If both points are below starting balance, red
+            else if (prev < startingBalance && next < startingBalance) {
+              return '#ef4444';
+            }
+            // If crossing the starting balance line, use gradient
+            else {
+              return undefined; // This will use the main borderColor gradient
+            }
+          }
+        },
         tension: 0.4,
         pointRadius: 2,
-        pointHoverRadius: 4
+        pointHoverRadius: 4,
+        pointBackgroundColor: function(context) {
+          const value = context.parsed.y;
+          return value >= startingBalance ? '#10b981' : '#ef4444';
+        },
+        pointBorderColor: function(context) {
+          const value = context.parsed.y;
+          return value >= startingBalance ? '#10b981' : '#ef4444';
+        }
       }]
     },
     options: {
@@ -817,6 +877,31 @@ function initCharts() {
           ticks: {
             ...chartConfig.scales.y.ticks,
             callback: value => '$' + value.toLocaleString()
+          }
+        }
+      },
+      plugins: {
+        ...chartConfig.plugins,
+        annotation: {
+          annotations: {
+            startingBalance: {
+              type: 'line',
+              yMin: startingBalance,
+              yMax: startingBalance,
+              borderColor: '#6b7280',
+              borderWidth: 1,
+              borderDash: [5, 5],
+              label: {
+                display: true,
+                content: 'Starting Balance',
+                position: 'end',
+                backgroundColor: '#1a1a1a',
+                color: '#9ca3af',
+                font: {
+                  size: 10
+                }
+              }
+            }
           }
         }
       }
@@ -918,9 +1003,28 @@ function initCharts() {
 
 // Switch equity view
 window.switchEquityView = (mode) => {
+  currentEquityView = mode;
   const source = mode === 'days' ? rawData.equityDays : rawData.equityTrades;
+  const startingBalance = source.length > 0 ? source[0].equity : 50000;
+  
   equityChart.data.labels = source.map(p => mode === 'days' ? p.date : `Trade ${p.trade}`);
   equityChart.data.datasets[0].data = source.map(p => p.equity);
+  
+  // Update the fill configuration
+  equityChart.data.datasets[0].fill = {
+    target: {
+      value: startingBalance
+    },
+    above: 'rgba(16, 185, 129, 0.1)', // Green fill above starting balance
+    below: 'rgba(239, 68, 68, 0.1)'   // Red fill below starting balance
+  };
+  
+  // Update annotation
+  if (equityChart.options.plugins.annotation) {
+    equityChart.options.plugins.annotation.annotations.startingBalance.yMin = startingBalance;
+    equityChart.options.plugins.annotation.annotations.startingBalance.yMax = startingBalance;
+  }
+  
   equityChart.update();
   
   document.getElementById('equityByTrades').classList.toggle('bg-[#2a2a2a]', mode === 'trades');
