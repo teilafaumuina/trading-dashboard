@@ -112,62 +112,26 @@
     }
     
     .screenshot-preview {
+      display: none;
       position: absolute;
-      bottom: 100%;
-      right: -50px;
-      transform: translateY(-8px);
-      visibility: hidden;
-      opacity: 0;
-      transition: opacity 0.3s, visibility 0.3s;
-      z-index: 1000;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 110%;
+      z-index: 50;
       background: #1a1a1a;
       border: 1px solid #3a3a3a;
       border-radius: 8px;
-      padding: 8px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.8);
-      pointer-events: none;
-    }
-    
-    @media (max-width: 768px) {
-      .screenshot-preview {
-        right: auto;
-        left: 50%;
-        transform: translateX(-50%) translateY(-8px);
-      }
+      padding: 6px;
     }
     
     .screenshot-link:hover .screenshot-preview {
-      visibility: visible;
-      opacity: 1;
+      display: block;
     }
     
     .screenshot-preview img {
       max-width: 400px;
       max-height: 300px;
       border-radius: 4px;
-      display: block;
-    }
-    
-    .screenshot-preview .loading-text {
-      color: #9ca3af;
-      font-size: 12px;
-      padding: 20px;
-    }
-    
-    .screenshot-preview .error-text {
-      color: #ef4444;
-      font-size: 12px;
-      padding: 20px;
-    }
-    
-    /* Ensure the preview shows above everything */
-    td {
-      position: relative;
-      z-index: 1;
-    }
-    
-    td:hover {
-      z-index: 100;
     }
     
     /* Pagination buttons */
@@ -519,29 +483,28 @@ function normalizeData(data) {
   return normalized;
 }
 
-// Enhanced Google Drive link converter with better handling
-function convertGoogleDriveLink(url) {
-  if (!url) return null;
+// Enhanced Google Drive link converter with thumbnail and full URLs
+function driveUrls(url) {
+  if (!url) return { thumb: null, full: null };
   
-  // Handle different Google Drive URL formats
-  let fileId = null;
+  let id = null;
   
   // Format: https://drive.google.com/file/d/FILE_ID/view
-  const match1 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-  if (match1) fileId = match1[1];
+  const m1 = url.match(/\/file\/d\/([\w-]+)/);
+  if (m1) id = m1[1];
   
   // Format: https://drive.google.com/open?id=FILE_ID
-  const match2 = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-  if (match2) fileId = match2[1];
+  const m2 = url.match(/[?&]id=([\w-]+)/);
+  if (m2) id = m2[1];
   
-  if (fileId) {
-    // Try multiple approaches for Google Drive images
-    // First try the direct thumbnail API which often works better
-    return `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
-    // Alternative: return `https://drive.google.com/uc?export=view&id=${fileId}`;
+  if (id) {
+    return {
+      thumb: `https://drive.google.com/thumbnail?id=${id}&sz=w400`,
+      full: `https://drive.google.com/uc?id=${id}`
+    };
   }
   
-  return url;
+  return { thumb: url, full: url };
 }
 
 // Fetch and initialize
@@ -1135,7 +1098,7 @@ function displayTrades(page = 1) {
   const tbody = document.getElementById('tradesTableBody');
   tbody.innerHTML = tradesToShow.map(trade => {
     const pnl = parseMoneyValue(trade.p_l || 0);
-    const screenshotUrl = convertGoogleDriveLink(trade.screenshot_url_A || trade.screenshot_url_B || trade.screenshot_url_C);
+    const { thumb, full } = driveUrls(trade.screenshot_url_A || trade.screenshot_url_B || trade.screenshot_url_C);
     
     return `
       <tr class="trade-row border-b border-[#2a2a2a] transition-colors" data-symbol="${(trade.symbol || '').toLowerCase()}" data-pnl="${pnl}">
@@ -1153,22 +1116,16 @@ function displayTrades(page = 1) {
           ${formatMoney(pnl)}
         </td>
         <td class="py-3 px-4 text-sm text-right hide-mobile">
-          ${trade.Balance ? `$${parseFloat(trade.Balance).toFixed(2)}` : '-'}
+          ${trade.Balance ? `${parseFloat(trade.Balance).toFixed(2)}` : '-'}
         </td>
         <td class="py-3 px-4 text-sm text-center">
-          ${screenshotUrl ? `
+          ${full ? `
             <div class="screenshot-link">
-              <a href="${screenshotUrl}" target="_blank" class="text-blue-400 hover:text-blue-300 underline">
+              <a href="${full}" target="_blank" class="text-blue-400 hover:text-blue-300 underline">
                 View
               </a>
               <div class="screenshot-preview">
-                <div class="loading-text">Loading...</div>
-                <img src="${screenshotUrl}" 
-                     alt="Trade Screenshot" 
-                     loading="lazy"
-                     style="display: none;"
-                     onload="this.style.display='block'; this.previousElementSibling.style.display='none';"
-                     onerror="this.style.display='none'; this.previousElementSibling.innerHTML='<span class=\\'error-text\\'>Unable to load image</span>';">
+                ${thumb ? `<img src="${thumb}" loading="lazy" alt="Trade Screenshot">` : ''}
               </div>
             </div>
           ` : '<span class="text-gray-500">-</span>'}
