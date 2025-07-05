@@ -1,11 +1,12 @@
 <!--
-  Trading Dashboard – FULL version with weekly P&L on Saturdays (July 2025)
+  Trading Dashboard – FIXED version with weekly P&L on Saturdays (July 2025)
   -----------------------------------------------------------------
-  • All original functionality kept (metrics, charts, screenshot hover‑preview).
-  • Calendar now shows a "Week N" summary with the cumulative net P&L inside
+  • All original functionality kept (metrics, charts, screenshot hover‑preview).
+  • Calendar now shows a "Week N" summary with the cumulative net P&L inside
     every Saturday cell (or month‑end) – exactly like the reference screenshot.
+  • Fixed template literal issues and calendar rendering bugs
   -----------------------------------------------------------------
-  Place this file as index.html and set DATA_URL to your n8n webhook JSON.
+  Place this file as index.html and set DATA_URL to your n8n webhook JSON.
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -40,6 +41,8 @@
     .screenshot-preview{display:none;position:absolute;left:50%;transform:translateX(-50%);bottom:110%;z-index:50;background:#1a1a1a;border:1px solid #3a3a3a;border-radius:8px;padding:6px}
     .screenshot-link:hover .screenshot-preview{display:block}
     .screenshot-preview img{max-width:400px;max-height:300px;border-radius:4px}
+    /* weekly summary */
+    .week-summary{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.7);padding:2px;text-align:center;font-size:10px;border-radius:0 0 4px 4px}
   </style>
 </head>
 <body class="bg-[#0a0a0a] text-white">
@@ -52,7 +55,7 @@
   <div id="errorState" class="hidden fixed inset-0 flex items-center justify-center bg-[#0a0a0a] z-50">
     <div class="p-8 bg-[#1a1a1a] rounded-lg border border-red-900 text-center max-w-md">
       <div class="text-red-400 text-5xl mb-3">⚠️</div>
-      <p class="mb-6">Failed to load or parse dashboard data.  Check the browser console &amp; ensure <code class="text-red-400">DATA_URL</code> allows CORS.</p>
+      <p class="mb-6">Failed to load or parse dashboard data. Check the browser console &amp; ensure <code class="text-red-400">DATA_URL</code> allows CORS.</p>
       <button onclick="location.reload()" class="px-4 py-2 bg-red-900 hover:bg-red-800 rounded">Retry</button>
     </div>
   </div>
@@ -68,7 +71,7 @@
     <!-- Metrics -->
     <div id="metricsContainer" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8"></div>
 
-    <!-- Equity curve (stub, rest unchanged) -->
+    <!-- Equity curve -->
     <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a] mb-8">
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
         <h2 class="text-lg font-semibold">Equity Curve</h2>
@@ -76,7 +79,7 @@
       <div class="chart-container"><canvas id="equityChart"></canvas></div>
     </div>
 
-    <!-- Calendar (weekly summary fix) -->
+    <!-- Calendar -->
     <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a] mb-8">
       <div class="flex justify-between items-center mb-4">
         <button onclick="changeCalendarMonth(-1)" class="p-2 hover:bg-[#2a2a2a] rounded">◀</button>
@@ -89,54 +92,397 @@
       <div id="calendarGrid" class="grid grid-cols-7 gap-2"></div>
     </div>
 
-    <!-- Trades table (with screenshot preview) -->
+    <!-- Trades table -->
     <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a]">
       <h2 class="text-lg font-semibold mb-4">Trade History</h2>
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead class="border-b border-[#2a2a2a]">
-            <tr><th class="py-3 px-4 text-left">Trade ID</th><th class="py-3 px-4 text-left">Date</th><th class="py-3 px-4 text-left">Symbol</th><th class="py-3 px-4 text-right">P&L</th><th class="py-3 px-4 text-center">Chart</th></tr>
+            <tr>
+              <th class="py-3 px-4 text-left">Trade ID</th>
+              <th class="py-3 px-4 text-left">Date</th>
+              <th class="py-3 px-4 text-left">Symbol</th>
+              <th class="py-3 px-4 text-right">P&L</th>
+              <th class="py-3 px-4 text-center">Chart</th>
+            </tr>
           </thead>
           <tbody id="tradesTableBody"></tbody>
         </table>
       </div>
       <div class="flex justify-between items-center mt-4 text-sm text-gray-400">
         <span id="paginationInfo"></span>
-        <div class="space-x-2"><button id="prevPage" class="px-3 py-1 bg-[#2a2a2a] rounded" onclick="changePage(-1)">Prev</button><button id="nextPage" class="px-3 py-1 bg-[#2a2a2a] rounded" onclick="changePage(1)">Next</button></div>
+        <div class="space-x-2">
+          <button id="prevPage" class="px-3 py-1 bg-[#2a2a2a] rounded hover:bg-[#3a3a3a]" onclick="changePage(-1)">Prev</button>
+          <button id="nextPage" class="px-3 py-1 bg-[#2a2a2a] rounded hover:bg-[#3a3a3a]" onclick="changePage(1)">Next</button>
+        </div>
       </div>
     </div>
   </div>
 
 <script>
 // ───────────────── CONFIG
-const DATA_URL='https://n8n-xza7.onrender.com/webhook/dashboard?format=json';
-const tradesPerPage=15;
+const DATA_URL = 'https://n8n-xza7.onrender.com/webhook/dashboard?format=json';
+const tradesPerPage = 15;
 
 // ───────────────── STATE
-let rawData={},allTrades=[],filteredTrades=[],currentPage=1;
+let rawData = {};
+let allTrades = [];
+let filteredTrades = [];
+let currentPage = 1;
+let calendarYear = new Date().getFullYear();
+let calendarMonth = new Date().getMonth();
 
 // ───────────────── HELPERS
-const money=v=>(v>=0?'+':'-')+'$'+Math.abs(+v||0).toFixed(2);
-function parseMoney(v){return +(String(v||'').replace(/[$,]/g,''))||0;}
-function driveUrls(u){if(!u)return{thumb:null,full:null};let id=null;const m1=u.match(/\/file\/d\/([\w-]+)/);if(m1)id=m1[1];const m2=u.match(/[?&]id=([\w-]+)/);if(m2)id=m2[1];if(id)return{thumb:`https://drive.google.com/thumbnail?id=${id}&sz=w400`,full:`https://drive.google.com/uc?id=${id}`};return{thumb:u,full:u};}
+const formatMoney = (value) => {
+  const num = parseFloat(value) || 0;
+  return (num >= 0 ? '+' : '') + '$' + Math.abs(num).toFixed(2);
+};
 
-// ───────────────── FETCH & BOOTSTRAP
-(async()=>{try{const r=await fetch(DATA_URL,{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);rawData=await r.json();allTrades=[...(rawData.trades||[])];filteredTrades=[...allTrades];document.getElementById('loadingState').classList.add('hidden');document.getElementById('mainDashboard').classList.remove('hidden');document.getElementById('lastUpdated').textContent=new Date().toLocaleString();buildMetrics();renderCalendar();renderTrades();}catch(e){console.error(e);document.getElementById('loadingState').classList.add('hidden');document.getElementById('errorState').classList.remove('hidden');}})();
+function parseMoney(value) {
+  return parseFloat(String(value || '').replace(/[$,]/g, '')) || 0;
+}
 
-// ───────────────── METRICS (minimal demo)
-function buildMetrics(){const net=allTrades.reduce((s,t)=>s+parseMoney(t.p_l),0);document.getElementById('metricsContainer').innerHTML=`<div class="metric-card p-4 rounded-lg border border-[#2a2a2a]"><p class=text-gray-400>Total Trades</p><p class=text-2xl>${allTrades.length}</p></div><div class="metric-card p-4 rounded-lg border border-[#2a2a2a]"><p class=text-gray-400>Net P&L</p><p class="text-2xl ${net>=0?'text-green-400':'text-red-400'}">${money(net)}</p></div>`;}
+function parseGoogleDriveUrls(url) {
+  if (!url) return { thumb: null, full: null };
+  
+  let fileId = null;
+  
+  // Try to extract ID from different Google Drive URL formats
+  const patterns = [
+    /\/file\/d\/([\w-]+)/,
+    /[?&]id=([\w-]+)/,
+    /drive\.google\.com\/open\?id=([\w-]+)/
+  ];
+  
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) {
+      fileId = match[1];
+      break;
+    }
+  }
+  
+  if (fileId) {
+    return {
+      thumb: `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`,
+      full: `https://drive.google.com/uc?id=${fileId}`
+    };
+  }
+  
+  return { thumb: url, full: url };
+}
+
+// ───────────────── FETCH & INITIALIZE
+async function initDashboard() {
+  try {
+    const response = await fetch(DATA_URL, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    
+    rawData = await response.json();
+    allTrades = [...(rawData.trades || [])];
+    filteredTrades = [...allTrades];
+    
+    document.getElementById('loadingState').classList.add('hidden');
+    document.getElementById('mainDashboard').classList.remove('hidden');
+    document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+    
+    buildMetrics();
+    renderCalendar();
+    renderTrades();
+    renderEquityChart();
+  } catch (error) {
+    console.error('Dashboard initialization failed:', error);
+    document.getElementById('loadingState').classList.add('hidden');
+    document.getElementById('errorState').classList.remove('hidden');
+  }
+}
+
+// ───────────────── METRICS
+function buildMetrics() {
+  const totalTrades = allTrades.length;
+  const netPnL = allTrades.reduce((sum, trade) => sum + parseMoney(trade.p_l), 0);
+  const winningTrades = allTrades.filter(t => parseMoney(t.p_l) > 0).length;
+  const losingTrades = allTrades.filter(t => parseMoney(t.p_l) < 0).length;
+  const winRate = totalTrades > 0 ? (winningTrades / totalTrades * 100).toFixed(1) : 0;
+  
+  document.getElementById('metricsContainer').innerHTML = `
+    <div class="metric-card p-4 rounded-lg border border-[#2a2a2a]">
+      <p class="text-gray-400 text-sm">Total Trades</p>
+      <p class="text-2xl font-bold">${totalTrades}</p>
+    </div>
+    <div class="metric-card p-4 rounded-lg border border-[#2a2a2a]">
+      <p class="text-gray-400 text-sm">Net P&L</p>
+      <p class="text-2xl font-bold ${netPnL >= 0 ? 'text-green-400' : 'text-red-400'}">${formatMoney(netPnL)}</p>
+    </div>
+    <div class="metric-card p-4 rounded-lg border border-[#2a2a2a]">
+      <p class="text-gray-400 text-sm">Win Rate</p>
+      <p class="text-2xl font-bold">${winRate}%</p>
+    </div>
+    <div class="metric-card p-4 rounded-lg border border-[#2a2a2a]">
+      <p class="text-gray-400 text-sm">Winners</p>
+      <p class="text-2xl font-bold text-green-400">${winningTrades}</p>
+    </div>
+    <div class="metric-card p-4 rounded-lg border border-[#2a2a2a]">
+      <p class="text-gray-400 text-sm">Losers</p>
+      <p class="text-2xl font-bold text-red-400">${losingTrades}</p>
+    </div>
+  `;
+}
 
 // ───────────────── CALENDAR WITH WEEKLY TOTALS
-let calY=new Date().getFullYear(),calM=new Date().getMonth();
-function renderCalendar(){const months=['January','February','March','April','May','June','July','August','September','October','November','December'];document.getElementById('calendarMonthYear').textContent=`${months[calM]} ${calY}`;const calMap=rawData.calendar?.[`${calY}-${calM}`]||{};const dim=new Date(calY,calM+1,0).getDate();const firstDow=new Date(calY,calM,1).getDay();const offset=firstDow===0?6:firstDow-1;const today=new Date(),isThisMonth=today.getFullYear()===calY&&today.getMonth()===calM,todayDate=today.getDate();let html='';let weekPnL=0,weekTrades=0,weekNo=1;for(let i=0;i<offset;i++)html+='<div class="h-16"></div>';for(let d=1;d<=dim;d++){const data=calMap[d];const has=data&&data.trades>0;const pnl=has?data.pnl:0;const clsBase=has?(pnl>=0?'bg-green-900/30 border-green-600/50':'bg-red-900/30 border-red-600/50'):'bg-[#1a1a1a] border-[#2a2a2a]';const isToday=isThisMonth&&d===todayDate;let cls=clsBase+(isToday?' ring-2 ring-blue-400':'');const dateObj=new Date(calY,calM,d);const wd=(dateObj.getDay()+6)%7;const isSat=wd===5;weekPnL+=pnl;weekTrades+=has?data.trades:0;html+=`<div class="calendar-day h-16 rounded border ${cls} flex flex-col items-center justify-center text-xs relative"><span class="font-medium">${d}</span>`;if(has){html+=`<span class="${pnl>=0?'text-green-400':'text-red-400'}">${pnl>=0?'+':''}${pnl.toFixed(0)}</span><span class="text-gray-500">${data.trades}t</span>`;}else if(isToday){html+='<span class="text-blue-400">Today</span>';}
-if(isSat||d===dim){html+=`<div class="absolute bottom-0 left-0 right-0 pb-1 text-[10px] ${weekPnL>=0?'text-green-400':'text-red-400'} font-semibold leading-tight">Week ${weekNo}<br>${money(weekPnL)}</div>`;weekPnL=0;weekTrades=0;weekNo++;}
-html+='</div>';}
-document.getElementById('calendarGrid').innerHTML=html;}
-function changeCalendarMonth(step){calM+=step;if(calM<0){calM=11;calY--;}else if(calM>11){calM=0;calY++;}renderCalendar();}
+function renderCalendar() {
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                  'July', 'August', 'September', 'October', 'November', 'December'];
+  
+  document.getElementById('calendarMonthYear').textContent = `${months[calendarMonth]} ${calendarYear}`;
+  
+  // Get calendar data for current month
+  const monthKey = `${calendarYear}-${calendarMonth}`;
+  const calendarData = rawData.calendar?.[monthKey] || {};
+  
+  // Calculate days in month and first day of week
+  const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
+  const firstDayOfWeek = new Date(calendarYear, calendarMonth, 1).getDay();
+  const startOffset = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1; // Monday start
+  
+  // Current date info
+  const today = new Date();
+  const isCurrentMonth = today.getFullYear() === calendarYear && today.getMonth() === calendarMonth;
+  const currentDate = today.getDate();
+  
+  // Build calendar HTML
+  let calendarHTML = '';
+  let weekPnL = 0;
+  let weekNumber = 1;
+  
+  // Add empty cells for days before month starts
+  for (let i = 0; i < startOffset; i++) {
+    calendarHTML += '<div class="h-16"></div>';
+  }
+  
+  // Add days of the month
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dayData = calendarData[day];
+    const hasTrades = dayData && dayData.trades > 0;
+    const dayPnL = hasTrades ? dayData.pnl : 0;
+    
+    // Accumulate weekly P&L
+    weekPnL += dayPnL;
+    
+    // Determine styling
+    let bgClass = 'bg-[#1a1a1a] border-[#2a2a2a]';
+    if (hasTrades) {
+      bgClass = dayPnL >= 0 
+        ? 'bg-green-900/30 border-green-600/50' 
+        : 'bg-red-900/30 border-red-600/50';
+    }
+    
+    const isToday = isCurrentMonth && day === currentDate;
+    const todayClass = isToday ? ' ring-2 ring-blue-400' : '';
+    
+    // Check if it's Saturday or last day of month
+    const currentDayDate = new Date(calendarYear, calendarMonth, day);
+    const dayOfWeek = currentDayDate.getDay();
+    const isSaturday = dayOfWeek === 6;
+    const isLastDay = day === daysInMonth;
+    
+    // Start building day cell
+    calendarHTML += `
+      <div class="calendar-day h-16 rounded border ${bgClass}${todayClass} flex flex-col items-center justify-center text-xs relative overflow-hidden">
+        <span class="font-medium">${day}</span>
+    `;
+    
+    if (hasTrades) {
+      calendarHTML += `
+        <span class="${dayPnL >= 0 ? 'text-green-400' : 'text-red-400'}">${dayPnL >= 0 ? '+' : ''}${dayPnL.toFixed(0)}</span>
+        <span class="text-gray-500">${dayData.trades}t</span>
+      `;
+    } else if (isToday) {
+      calendarHTML += '<span class="text-blue-400 text-[10px]">Today</span>';
+    }
+    
+    // Add weekly summary on Saturdays or last day of month
+    if ((isSaturday || isLastDay) && weekPnL !== 0) {
+      calendarHTML += `
+        <div class="week-summary ${weekPnL >= 0 ? 'text-green-400' : 'text-red-400'}">
+          <div class="font-semibold">Week ${weekNumber}</div>
+          <div>${formatMoney(weekPnL)}</div>
+        </div>
+      `;
+      weekPnL = 0;
+      weekNumber++;
+    }
+    
+    calendarHTML += '</div>';
+  }
+  
+  // Update calendar grid
+  const calendarGrid = document.getElementById('calendarGrid');
+  if (calendarGrid) {
+    calendarGrid.innerHTML = calendarHTML;
+  }
+}
+
+function changeCalendarMonth(step) {
+  calendarMonth += step;
+  
+  if (calendarMonth < 0) {
+    calendarMonth = 11;
+    calendarYear--;
+  } else if (calendarMonth > 11) {
+    calendarMonth = 0;
+    calendarYear++;
+  }
+  
+  renderCalendar();
+}
+
+// ───────────────── EQUITY CHART
+function renderEquityChart() {
+  const ctx = document.getElementById('equityChart');
+  if (!ctx) return;
+  
+  // Sort trades by date for cumulative calculation
+  const sortedTrades = [...allTrades].sort((a, b) => 
+    new Date(a.date) - new Date(b.date)
+  );
+  
+  // Calculate cumulative P&L
+  let cumulative = 0;
+  const chartData = sortedTrades.map(trade => {
+    cumulative += parseMoney(trade.p_l);
+    return {
+      x: new Date(trade.date),
+      y: cumulative
+    };
+  });
+  
+  // Add starting point
+  if (chartData.length > 0) {
+    chartData.unshift({
+      x: new Date(chartData[0].x.getTime() - 86400000), // Day before first trade
+      y: 0
+    });
+  }
+  
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      datasets: [{
+        label: 'Cumulative P&L',
+        data: chartData,
+        borderColor: cumulative >= 0 ? '#10b981' : '#ef4444',
+        backgroundColor: cumulative >= 0 ? '#10b98120' : '#ef444420',
+        borderWidth: 2,
+        fill: true,
+        tension: 0.1,
+        pointRadius: 3,
+        pointHoverRadius: 5
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => `P&L: ${formatMoney(context.parsed.y)}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          type: 'time',
+          time: {
+            unit: 'day',
+            displayFormats: {
+              day: 'MMM d'
+            }
+          },
+          grid: {
+            color: '#2a2a2a'
+          },
+          ticks: {
+            color: '#6b7280'
+          }
+        },
+        y: {
+          grid: {
+            color: '#2a2a2a'
+          },
+          ticks: {
+            color: '#6b7280',
+            callback: (value) => formatMoney(value)
+          }
+        }
+      }
+    }
+  });
+}
 
 // ───────────────── TRADES TABLE
-function renderTrades(page=1){const start=(page-1)*tradesPerPage,end=Math.min(start+tradesPerPage,filteredTrades.length);document.getElementById('paginationInfo').textContent=filteredTrades.length?`Showing ${start+1}-${end} of ${filteredTrades.length}`:'No trades';const rows=filteredTrades.slice(start,end).map(t=>{const pnl=parseMoney(t.p_l);const {thumb,full}=driveUrls(t.screenshot_url_A||t.screenshot_url_B||t.screenshot_url_C);return`<tr class="trade-row border-b border-[#2a2a2a]"><td class="py-3 px-4 text-xs font-mono">${t.trade_id||''}</td><td class="py-3 px-4">${t.date||''}</td><td class="py-3 px-4 font-medium">${t.symbol||''}</td><td class="py-3 px-4 text-right ${pnl>=0?'text-green-400':'text-red-400'}">${money(pnl)}</td><td class="py-3 px-4 text-center">${full?`<div class="screenshot-link"><a href="${full}" target="_blank" class="underline text-blue-400">View</a><div class="screenshot-preview">${thumb?`<img src="${thumb}" loading="lazy">`:''}</div></div>`:'-'}</td></tr>`}).join('');document.getElementById('tradesTableBody').innerHTML=rows;const pages=Math.ceil(filteredTrades.length/tradesPerPage);document.getElementById('prevPage').disabled=page===1;document.getElementById('nextPage').disabled=page>=pages;currentPage=page;}
-function changePage(step){const pages=Math.ceil(filteredTrades.length/tradesPerPage);const next=currentPage+step;if(next>=1&&next<=pages) renderTrades(next);}
+function renderTrades(page = 1) {
+  const start = (page - 1) * tradesPerPage;
+  const end = Math.min(start + tradesPerPage, filteredTrades.length);
+  const totalPages = Math.ceil(filteredTrades.length / tradesPerPage);
+  
+  // Update pagination info
+  document.getElementById('paginationInfo').textContent = 
+    filteredTrades.length ? `Showing ${start + 1}-${end} of ${filteredTrades.length}` : 'No trades';
+  
+  // Build table rows
+  const rows = filteredTrades.slice(start, end).map(trade => {
+    const pnl = parseMoney(trade.p_l);
+    const urls = parseGoogleDriveUrls(
+      trade.screenshot_url_A || trade.screenshot_url_B || trade.screenshot_url_C
+    );
+    
+    return `
+      <tr class="trade-row border-b border-[#2a2a2a]">
+        <td class="py-3 px-4 text-xs font-mono">${trade.trade_id || '-'}</td>
+        <td class="py-3 px-4">${trade.date || '-'}</td>
+        <td class="py-3 px-4 font-medium">${trade.symbol || '-'}</td>
+        <td class="py-3 px-4 text-right ${pnl >= 0 ? 'text-green-400' : 'text-red-400'}">${formatMoney(pnl)}</td>
+        <td class="py-3 px-4 text-center">
+          ${urls.full ? `
+            <div class="screenshot-link">
+              <a href="${urls.full}" target="_blank" class="underline text-blue-400 hover:text-blue-300">View</a>
+              <div class="screenshot-preview">
+                ${urls.thumb ? `<img src="${urls.thumb}" loading="lazy" alt="Trade screenshot">` : ''}
+              </div>
+            </div>
+          ` : '-'}
+        </td>
+      </tr>
+    `;
+  }).join('');
+  
+  document.getElementById('tradesTableBody').innerHTML = rows;
+  
+  // Update pagination buttons
+  const prevButton = document.getElementById('prevPage');
+  const nextButton = document.getElementById('nextPage');
+  
+  if (prevButton) prevButton.disabled = page === 1;
+  if (nextButton) nextButton.disabled = page >= totalPages;
+  
+  currentPage = page;
+}
+
+function changePage(step) {
+  const totalPages = Math.ceil(filteredTrades.length / tradesPerPage);
+  const newPage = currentPage + step;
+  
+  if (newPage >= 1 && newPage <= totalPages) {
+    renderTrades(newPage);
+  }
+}
+
+// ───────────────── START APPLICATION
+initDashboard();
 </script>
 </body>
 </html>
