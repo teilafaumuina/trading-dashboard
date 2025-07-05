@@ -28,12 +28,45 @@
       position: relative;
       transition: all 0.2s ease;
       cursor: pointer;
+      overflow: visible;
     }
     
     .calendar-day:hover {
       transform: scale(1.05);
       z-index: 10;
       box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+    }
+    
+    .calendar-tooltip {
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%) translateY(-8px);
+      background: #1a1a1a;
+      border: 1px solid #3a3a3a;
+      border-radius: 8px;
+      padding: 12px;
+      visibility: hidden;
+      opacity: 0;
+      transition: opacity 0.3s, visibility 0.3s;
+      min-width: 200px;
+      z-index: 100;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+      white-space: nowrap;
+    }
+    
+    .calendar-day:hover .calendar-tooltip {
+      visibility: visible;
+      opacity: 1;
+    }
+    
+    /* Weekly summary styling */
+    .weekly-summary {
+      transition: all 0.2s ease;
+    }
+    
+    .calendar-day:hover .weekly-summary {
+      background: #1a1a1a;
     }
     
     .calendar-tooltip {
@@ -247,7 +280,7 @@
         <div class="grid grid-cols-7 gap-2 text-center text-gray-500 text-xs mb-2">
           <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
         </div>
-        <div id="calendarGrid" class="grid grid-cols-7 gap-2"></div>
+        <div id="calendarGrid" class="grid grid-cols-7 gap-2 auto-rows-fr"></div>
       </div>
 
       <!-- Evaluation Panel -->
@@ -1012,11 +1045,39 @@ function renderCalendar() {
   const firstDayOfWeek = new Date(calendarYear, calendarMonth, 1).getDay();
   const offset = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
   
+  // Calculate weekly P&L
+  const weeklyPnL = {};
+  let currentWeek = 1;
+  
+  // First, group days into weeks
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dayOfWeek = new Date(calendarYear, calendarMonth, day).getDay();
+    
+    // Initialize week if needed
+    if (!weeklyPnL[currentWeek]) {
+      weeklyPnL[currentWeek] = { pnl: 0, trades: 0, days: [] };
+    }
+    
+    // Add day's data to current week
+    const dayData = calendarData[day];
+    if (dayData && dayData.trades > 0) {
+      weeklyPnL[currentWeek].pnl += dayData.pnl;
+      weeklyPnL[currentWeek].trades += dayData.trades;
+      weeklyPnL[currentWeek].days.push(day);
+    }
+    
+    // Move to next week after Sunday (dayOfWeek === 0)
+    if (dayOfWeek === 0 && day < daysInMonth) {
+      currentWeek++;
+    }
+  }
+  
   let html = '';
+  currentWeek = 1;
   
   // Empty cells
   for (let i = 0; i < offset; i++) {
-    html += '<div class="h-16"></div>';
+    html += '<div class="h-24"></div>';
   }
   
   // Days of month
@@ -1025,11 +1086,22 @@ function renderCalendar() {
   const todayDate = today.getDate();
   
   for (let day = 1; day <= daysInMonth; day++) {
+    const dayOfWeek = new Date(calendarYear, calendarMonth, day).getDay();
     const dayData = calendarData[day];
     const hasData = dayData && dayData.trades > 0;
     const isToday = isCurrentMonth && day === todayDate;
+    const isSaturday = dayOfWeek === 6;
     
-    let bgClass = hasData ? (dayData.pnl > 0 ? 'bg-green-900/30 border-green-600/50' : 'bg-red-900/30 border-red-600/50') : 'bg-[#1a1a1a] border-[#2a2a2a]';
+    let bgClass;
+    if (hasData) {
+      bgClass = dayData.pnl > 0 ? 'bg-green-900/30 border-green-600/50' : 'bg-red-900/30 border-red-600/50';
+    } else if (showWeeklySummary) {
+      // If Saturday has no trades but shows weekly summary, use subtle styling
+      bgClass = 'bg-[#1a1a1a] border-[#3a3a3a]';
+    } else {
+      bgClass = 'bg-[#1a1a1a] border-[#2a2a2a]';
+    }
+    
     if (isToday) bgClass += ' ring-2 ring-blue-400';
     
     // Get trades for this day
@@ -1040,8 +1112,11 @@ function renderCalendar() {
              tradeDate.getDate() === day;
     });
     
+    // Check if this is Saturday and we should show weekly summary
+    const showWeeklySummary = isSaturday && weeklyPnL[currentWeek] && weeklyPnL[currentWeek].trades > 0;
+    
     html += `
-      <div class="calendar-day h-16 rounded border ${bgClass} flex flex-col items-center justify-center text-sm">
+      <div class="calendar-day h-16 rounded border ${bgClass} flex flex-col items-center justify-center text-sm ${showWeeklySummary ? 'relative' : ''}">
         <span class="font-medium">${day}</span>
         ${hasData ? `
           <span class="text-xs ${dayData.pnl >= 0 ? 'text-green-400' : 'text-red-400'}">
@@ -1070,8 +1145,23 @@ function renderCalendar() {
             </div>
           ` : ''}
         ` : isToday ? '<span class="text-blue-400 text-xs">Today</span>' : ''}
+        ${showWeeklySummary ? `
+          <div class="absolute bottom-0 left-0 right-0 bg-[#0a0a0a] border-t ${weeklyPnL[currentWeek].pnl >= 0 ? 'border-green-600' : 'border-red-600'} px-1 py-0.5 rounded-b">
+            <div class="text-xs font-bold ${weeklyPnL[currentWeek].pnl >= 0 ? 'text-green-400' : 'text-red-400'} text-center">
+              Week ${currentWeek}
+            </div>
+            <div class="text-xs font-bold ${weeklyPnL[currentWeek].pnl >= 0 ? 'text-green-400' : 'text-red-400'} text-center">
+              ${weeklyPnL[currentWeek].pnl >= 0 ? '+' : ''}${weeklyPnL[currentWeek].pnl.toFixed(2)}
+            </div>
+          </div>
+        ` : ''}
       </div>
     `;
+    
+    // Move to next week after Sunday
+    if (dayOfWeek === 0 && day < daysInMonth) {
+      currentWeek++;
+    }
   }
   
   document.getElementById('calendarGrid').innerHTML = html;
