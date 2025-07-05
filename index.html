@@ -421,7 +421,15 @@ function parseMoneyValue(value) {
 
 // Calculate net P&L including fees
 function getNetPnL(trade) {
-  const pnl = parseMoneyValue(trade.p_l || 0);
+  if (!trade) return 0;
+  
+  // If p_l net exists, use it (it's already net of fees)
+  if (trade['p_l net'] !== undefined && trade['p_l net'] !== null) {
+    return parseMoneyValue(trade['p_l net']);
+  }
+  
+  // Otherwise calculate from p_l minus fees
+  const pnl = parseMoneyValue(trade.p_l || trade.pnl || 0);
   const fees = parseMoneyValue(trade.fees || trade.fee || 0);
   return pnl - fees;
 }
@@ -440,7 +448,6 @@ function normalizeData(data) {
   normalized.symbols = typeof data.symbols === 'object' && data.symbols ? data.symbols : {};
   normalized.weekdays = typeof data.weekdays === 'object' && data.weekdays ? data.weekdays : {};
   normalized.hours = typeof data.hours === 'object' && data.hours ? data.hours : {};
-  normalized.calendar = typeof data.calendar === 'object' && data.calendar ? data.calendar : {};
   normalized.metadata = typeof data.metadata === 'object' && data.metadata ? data.metadata : {};
   
   // Recalculate equity curves with fees if needed
@@ -547,8 +554,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     
     const data = await response.json();
+    
+    // Ensure data has basic structure
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid data format');
+    }
+    
     rawData = normalizeData(data);
-    allTrades = [...rawData.trades];
+    allTrades = [...(rawData.trades || [])];
     filteredTrades = [...allTrades];
     
     document.getElementById('loadingState').classList.add('hidden');
@@ -588,10 +601,10 @@ function buildMetrics() {
   const returnPercent = ((netPL / startingBalance) * 100).toFixed(1);
   
   // Calculate average win/loss
-  const wins = trades.filter(t => parseMoneyValue(t.p_l) > 0);
-  const losses = trades.filter(t => parseMoneyValue(t.p_l) < 0);
-  const avgWin = wins.length ? wins.reduce((sum, t) => sum + parseMoneyValue(t.p_l), 0) / wins.length : 0;
-  const avgLoss = losses.length ? Math.abs(losses.reduce((sum, t) => sum + parseMoneyValue(t.p_l), 0) / losses.length) : 0;
+  const wins = trades.filter(t => getNetPnL(t) > 0);
+  const losses = trades.filter(t => getNetPnL(t) < 0);
+  const avgWin = wins.length ? wins.reduce((sum, t) => sum + getNetPnL(t), 0) / wins.length : 0;
+  const avgLoss = losses.length ? Math.abs(losses.reduce((sum, t) => sum + getNetPnL(t), 0) / losses.length) : 0;
   
   const metrics = [
     {
@@ -653,7 +666,27 @@ function buildMetrics() {
 
 // Build symbol performance
 function buildSymbolPerformance() {
-  const symbols = Object.entries(rawData.symbols || {})
+  // If no symbols data, calculate from trades
+  let symbolsData = rawData.symbols;
+  
+  if (!symbolsData || Object.keys(symbolsData).length === 0) {
+    symbolsData = {};
+    (rawData.trades || []).forEach(trade => {
+      const symbol = trade.symbol;
+      if (!symbol) return;
+      
+      if (!symbolsData[symbol]) {
+        symbolsData[symbol] = { pnl: 0, trades: 0, wins: 0 };
+      }
+      
+      const netPnL = getNetPnL(trade);
+      symbolsData[symbol].pnl += netPnL;
+      symbolsData[symbol].trades++;
+      if (netPnL > 0) symbolsData[symbol].wins++;
+    });
+  }
+  
+  const symbols = Object.entries(symbolsData)
     .sort((a, b) => b[1].pnl - a[1].pnl)
     .slice(0, 5);
   
@@ -699,7 +732,7 @@ function buildEvaluationPanel() {
   let streak = 0;
   let streakType = '';
   for (let i = trades.length - 1; i >= 0; i--) {
-    const isWin = parseMoneyValue(trades[i].p_l) > 0;
+    const isWin = getNetPnL(trades[i]) > 0;
     if (i === trades.length - 1) {
       streakType = isWin ? 'W' : 'L';
     }
@@ -905,9 +938,26 @@ function initCharts() {
   });
   
   // Time Analysis Chart
-  const hourData = Object.entries(rawData.hours || {})
-    .map(([hour, data]) => ({ hour: parseInt(hour), pnl: data.pnl, trades: data.trades }))
-    .sort((a, b) => a.hour - b.hour);
+  let hourData = [];
+  if (rawData.hours && Object.keys(rawData.hours).length > 0) {
+    hourData = Object.entries(rawData.hours)
+      .map(([hour, data]) => ({ hour: parseInt(hour), pnl: data.pnl, trades: data.trades }))
+      .sort((a, b) => a.hour - b.hour);
+  } else {
+    // Calculate from trades if hours data not available
+    const hoursMap = {};
+    (rawData.trades || []).forEach(trade => {
+      if (trade.entry_time) {
+        const hour = parseInt(trade.entry_time.split(':')[0]);
+        if (!hoursMap[hour]) hoursMap[hour] = { pnl: 0, trades: 0 };
+        hoursMap[hour].pnl += getNetPnL(trade);
+        hoursMap[hour].trades++;
+      }
+    });
+    hourData = Object.entries(hoursMap)
+      .map(([hour, data]) => ({ hour: parseInt(hour), pnl: data.pnl, trades: data.trades }))
+      .sort((a, b) => a.hour - b.hour);
+  }
   
   timeChart = new Chart(document.getElementById('timeAnalysisChart'), {
     type: 'bar',
@@ -936,9 +986,25 @@ function initCharts() {
   });
   
   // Symbol Chart
-  const symbolData = Object.entries(rawData.symbols || {})
-    .sort((a, b) => b[1].pnl - a[1].pnl)
-    .slice(0, 10);
+  let symbolData = [];
+  if (rawData.symbols && Object.keys(rawData.symbols).length > 0) {
+    symbolData = Object.entries(rawData.symbols)
+      .sort((a, b) => b[1].pnl - a[1].pnl)
+      .slice(0, 10);
+  } else {
+    // Calculate from trades if symbols data not available
+    const symbolsMap = {};
+    (rawData.trades || []).forEach(trade => {
+      const symbol = trade.symbol;
+      if (!symbol) return;
+      if (!symbolsMap[symbol]) symbolsMap[symbol] = { pnl: 0, trades: 0 };
+      symbolsMap[symbol].pnl += getNetPnL(trade);
+      symbolsMap[symbol].trades++;
+    });
+    symbolData = Object.entries(symbolsMap)
+      .sort((a, b) => b[1].pnl - a[1].pnl)
+      .slice(0, 10);
+  }
   
   symbolChart = new Chart(document.getElementById('symbolChart'), {
     type: 'bar',
@@ -968,7 +1034,21 @@ function initCharts() {
   
   // Weekday Chart
   const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-  const weekdayData = rawData.weekdays || {};
+  let weekdayData = rawData.weekdays || {};
+  
+  // If no weekday data, calculate from trades
+  if (Object.keys(weekdayData).length === 0) {
+    weekdayData = {};
+    (rawData.trades || []).forEach(trade => {
+      if (trade.date) {
+        const date = new Date(trade.date);
+        const dayName = weekdays[date.getDay() === 0 ? 6 : date.getDay() - 1]; // Adjust for Monday start
+        if (!weekdayData[dayName]) weekdayData[dayName] = { pnl: 0, trades: 0 };
+        weekdayData[dayName].pnl += getNetPnL(trade);
+        weekdayData[dayName].trades++;
+      }
+    });
+  }
   
   weekdayChart = new Chart(document.getElementById('weekdayChart'), {
     type: 'bar',
@@ -1187,7 +1267,7 @@ function displayTrades(page = 1) {
   
   const tbody = document.getElementById('tradesTableBody');
   tbody.innerHTML = tradesToShow.map(trade => {
-    const pnl = parseMoneyValue(trade.p_l || 0);
+    const pnl = getNetPnL(trade);
     const { thumb, full } = driveUrls(trade.screenshot_url_A || trade.screenshot_url_B || trade.screenshot_url_C);
     
     return `
@@ -1204,6 +1284,7 @@ function displayTrades(page = 1) {
         <td class="py-3 px-4 text-sm text-gray-300 hide-mobile">${parseFloat(trade.exit_price || 0).toFixed(2)}</td>
         <td class="py-3 px-4 text-sm font-bold text-right ${pnl >= 0 ? 'text-green-400' : 'text-red-400'}">
           ${formatMoney(pnl)}
+          ${trade.fees ? `<span class="text-xs text-gray-500 block">Fee: ${parseFloat(trade.fees).toFixed(2)}</span>` : ''}
         </td>
         <td class="py-3 px-4 text-sm text-right hide-mobile">
           ${trade.Balance ? `${parseFloat(trade.Balance).toFixed(2)}` : '-'}
@@ -1249,7 +1330,7 @@ window.filterTrades = () => {
   
   filteredTrades = allTrades.filter(trade => {
     const symbol = (trade.symbol || '').toLowerCase();
-    const pnl = parseMoneyValue(trade.p_l);
+    const pnl = getNetPnL(trade);
     
     let matchesSearch = !searchTerm || symbol.includes(searchTerm);
     let matchesFilter = true;
