@@ -59,28 +59,6 @@
       opacity: 1;
     }
     
-    /* weekly summary */
-    .week-summary {
-      position: absolute;
-      bottom: 2px;
-      left: 2px;
-      right: 2px;
-      text-align: center;
-      font-size: 10px;
-      line-height: 1.2;
-      padding: 1px 0;
-    }
-    
-    .week-summary .week-label {
-      font-size: 9px;
-      opacity: 0.8;
-    }
-    
-    .week-summary .week-amount {
-      font-weight: 600;
-      font-size: 11px;
-    }
-    
     ::-webkit-scrollbar {
       width: 8px;
       height: 8px;
@@ -1054,7 +1032,7 @@ function renderCalendar() {
   
   // Add empty cells for days before month starts
   for (let i = 0; i < startOffset; i++) {
-    calendarHTML += '<div class="h-20"></div>';
+    calendarHTML += '<div class="h-16"></div>';
   }
   
   // Add days of the month
@@ -1082,6 +1060,9 @@ function renderCalendar() {
     const dayOfWeek = currentDayDate.getDay();
     const isSaturday = dayOfWeek === 6;
     
+    // Determine if we should show weekly summary
+    const showWeeklySummary = isSaturday && Math.abs(weekPnL) > 0.01;
+    
     // Get trades for this day
     const dayTrades = rawData.trades.filter(t => {
       const tradeDate = new Date(t.date);
@@ -1091,8 +1072,10 @@ function renderCalendar() {
     });
     
     // Start building day cell
+    const cellHeight = showWeeklySummary ? 'h-20' : 'h-16';
+    const cellSpacing = showWeeklySummary ? 'space-y-0.5' : '';
     calendarHTML += `
-      <div class="calendar-day h-20 rounded border ${bgClass}${todayClass} flex flex-col items-center justify-center text-sm relative overflow-visible">
+      <div class="calendar-day ${cellHeight} rounded border ${bgClass}${todayClass} flex flex-col items-center justify-center ${cellSpacing} text-sm relative overflow-visible">
         <span class="font-medium text-sm">${day}</span>
     `;
     
