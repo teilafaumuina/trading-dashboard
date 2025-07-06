@@ -173,6 +173,7 @@
   </style>
 </head>
 <body class="bg-[#0a0a0a] text-white">
+  <!-- Loading State -->
   <div id="loadingState" class="fixed inset-0 bg-[#0a0a0a] flex items-center justify-center z-50">
     <div class="text-center">
       <div class="loading-spinner mx-auto mb-4"></div>
@@ -180,6 +181,7 @@
     </div>
   </div>
 
+  <!-- Error State -->
   <div id="errorState" class="hidden fixed inset-0 bg-[#0a0a0a] flex items-center justify-center z-50">
     <div class="text-center p-8 bg-[#1a1a1a] rounded-lg border border-red-900">
       <div class="text-red-400 text-6xl mb-4">⚠️</div>
@@ -191,7 +193,9 @@
     </div>
   </div>
 
+  <!-- Main Dashboard -->
   <div id="mainDashboard" class="hidden min-h-screen p-4 md:p-6 max-w-7xl mx-auto">
+    <!-- Header -->
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
       <h1 class="text-2xl sm:text-3xl font-bold flex items-center">
         Teila's Trading Dashboard 
@@ -202,8 +206,10 @@
       </div>
     </div>
 
+    <!-- Key Metrics -->
     <div id="metricsContainer" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8"></div>
 
+    <!-- Equity Curve -->
     <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a] mb-8">
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
         <h2 class="text-lg font-semibold">Equity Curve</h2>
@@ -221,7 +227,9 @@
       </div>
     </div>
 
+    <!-- Calendar & Evaluation -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <!-- Calendar -->
       <div class="lg:col-span-2 bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a]">
         <div class="flex justify-between items-center mb-4">
           <button onclick="changeCalendarMonth(-1)" class="p-2 hover:bg-[#2a2a2a] rounded transition-colors">
@@ -242,18 +250,22 @@
         <div id="calendarGrid" class="grid grid-cols-7 gap-2"></div>
       </div>
 
+      <!-- Evaluation Panel -->
       <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a]">
         <h2 class="text-lg font-semibold mb-6">Evaluation</h2>
         <div id="evaluationPanel" class="space-y-4"></div>
       </div>
     </div>
 
+    <!-- Performance Analysis -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <!-- Symbol Performance -->
       <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a]">
         <h2 class="text-lg font-semibold mb-4">Top Performing Symbols</h2>
         <div id="symbolPerformance" class="space-y-2"></div>
       </div>
 
+      <!-- Time Analysis -->
       <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a]">
         <h2 class="text-lg font-semibold mb-4">Best Trading Times</h2>
         <div class="chart-container h-64">
@@ -262,7 +274,9 @@
       </div>
     </div>
 
+    <!-- Additional Charts -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <!-- Symbol Chart -->
       <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a]">
         <h2 class="text-lg font-semibold mb-6">Performance by Symbol</h2>
         <div class="chart-container">
@@ -270,6 +284,7 @@
         </div>
       </div>
 
+      <!-- Weekday Chart -->
       <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a]">
         <h2 class="text-lg font-semibold mb-6">Performance by Weekday</h2>
         <div class="chart-container">
@@ -278,12 +293,15 @@
       </div>
     </div>
 
+    <!-- Insights -->
     <div id="insightsContainer" class="mb-8"></div>
 
+    <!-- Trades Table -->
     <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a]">
       <div class="flex flex-col gap-4 mb-4">
         <h2 class="text-lg font-semibold">Trade History</h2>
         
+        <!-- Mobile responsive controls -->
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <span id="paginationInfo" class="text-sm text-gray-400 order-2 sm:order-1"></span>
           
@@ -880,92 +898,24 @@ function initCharts() {
             callback: value => formatMoney(value)
           }
         }
-      },
-      plugins: {
-        ...chartConfig.plugins,
-        tooltip: {
-          ...chartConfig.plugins.tooltip,
-          callbacks: {
-            title: function(context) {
-              const hour = context[0].label;
-              return `Hour: ${hour}`;
-            },
-            label: function(context) {
-              const pnl = context.raw;
-              const trades = hourData[context.dataIndex].trades;
-              return `P&L: ${formatMoney(pnl)} (${trades} trades)`;
-            }
-          }
-        }
       }
     }
   });
   
   // Symbol Chart
-  const symbolChartData = Object.entries(rawData.symbols || {})
-    .map(([symbol, data]) => ({ symbol, pnl: data.pnl, trades: data.trades }))
-    .sort((a, b) => b.pnl - a.pnl)
+  const symbolData = Object.entries(rawData.symbols || {})
+    .sort((a, b) => b[1].pnl - a[1].pnl)
     .slice(0, 10);
   
   symbolChart = new Chart(document.getElementById('symbolChart'), {
     type: 'bar',
     data: {
-      labels: symbolChartData.map(d => d.symbol),
+      labels: symbolData.map(([symbol]) => symbol),
       datasets: [{
-        data: symbolChartData.map(d => d.pnl),
-        backgroundColor: symbolChartData.map(d => d.pnl >= 0 ? 'rgba(16, 185, 129, 0.7)' : 'rgba(239, 68, 68, 0.7)'),
-        borderColor: symbolChartData.map(d => d.pnl >= 0 ? '#10b981' : '#ef4444'),
-        borderWidth: 1
-      }]
-    },
-    options: {
-      ...chartConfig,
-      indexAxis: 'y', // Make it a horizontal bar chart
-      scales: {
-        ...chartConfig.scales,
-        x: { // x-axis becomes numerical
-          ...chartConfig.scales.x,
-          ticks: {
-            ...chartConfig.scales.x.ticks,
-            callback: value => formatMoney(value)
-          }
-        }
-      },
-      plugins: {
-        ...chartConfig.plugins,
-        tooltip: {
-          ...chartConfig.plugins.tooltip,
-          callbacks: {
-            title: function(context) {
-              return context[0].label;
-            },
-            label: function(context) {
-              const pnl = context.raw;
-              const trades = symbolChartData[context.dataIndex].trades;
-              return `P&L: ${formatMoney(pnl)} (${trades} trades)`;
-            }
-          }
-        }
-      }
-    }
-  });
-  
-  // Weekday Chart
-  const weekdayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-  const weekdayData = weekdayOrder.map(day => {
-    const data = rawData.weekdays[day] || { pnl: 0, trades: 0 };
-    return { day, pnl: data.pnl, trades: data.trades };
-  });
-  
-  weekdayChart = new Chart(document.getElementById('weekdayChart'), {
-    type: 'bar',
-    data: {
-      labels: weekdayData.map(d => d.day.substring(0, 3)), // Abbreviate day names
-      datasets: [{
-        data: weekdayData.map(d => d.pnl),
-        backgroundColor: weekdayData.map(d => d.pnl >= 0 ? 'rgba(16, 185, 129, 0.7)' : 'rgba(239, 68, 68, 0.7)'),
-        borderColor: weekdayData.map(d => d.pnl >= 0 ? '#10b981' : '#ef4444'),
-        borderWidth: 1
+        data: symbolData.map(([, data]) => data.pnl),
+        backgroundColor: symbolData.map(([, data]) => data.pnl >= 0 ? '#10b981' : '#ef4444'),
+        borderRadius: 4,
+        borderSkipped: false
       }]
     },
     options: {
@@ -979,20 +929,34 @@ function initCharts() {
             callback: value => formatMoney(value)
           }
         }
-      },
-      plugins: {
-        ...chartConfig.plugins,
-        tooltip: {
-          ...chartConfig.plugins.tooltip,
-          callbacks: {
-            title: function(context) {
-              return weekdayOrder[context[0].dataIndex];
-            },
-            label: function(context) {
-              const pnl = context.raw;
-              const trades = weekdayData[context.dataIndex].trades;
-              return `P&L: ${formatMoney(pnl)} (${trades} trades)`;
-            }
+      }
+    }
+  });
+  
+  // Weekday Chart
+  const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const weekdayData = rawData.weekdays || {};
+  
+  weekdayChart = new Chart(document.getElementById('weekdayChart'), {
+    type: 'bar',
+    data: {
+      labels: weekdays,
+      datasets: [{
+        data: weekdays.map(day => weekdayData[day]?.pnl || 0),
+        backgroundColor: weekdays.map(day => (weekdayData[day]?.pnl || 0) >= 0 ? '#10b981' : '#ef4444'),
+        borderRadius: 4,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      ...chartConfig,
+      scales: {
+        ...chartConfig.scales,
+        y: {
+          ...chartConfig.scales.y,
+          ticks: {
+            ...chartConfig.scales.y.ticks,
+            callback: value => formatMoney(value)
           }
         }
       }
@@ -1000,162 +964,159 @@ function initCharts() {
   });
 }
 
-// Switch Equity View
-function switchEquityView(view) {
-  currentEquityView = view;
-  const equityData = view === 'trades' ? rawData.equityTrades : rawData.equityDays;
-  const startingBalance = equityData.length > 0 ? equityData[0].equity : 50000;
+// Switch equity view
+window.switchEquityView = (mode) => {
+  currentEquityView = mode;
+  const source = mode === 'days' ? rawData.equityDays : rawData.equityTrades;
+  const startingBalance = source.length > 0 ? source[0].equity : 50000;
   
-  equityChart.data.labels = equityData.map((p, i) => view === 'trades' ? `Trade ${p.trade}` : p.date);
-  equityChart.data.datasets[0].data = equityData.map(p => p.equity);
+  equityChart.data.labels = source.map(p => mode === 'days' ? p.date : `Trade ${p.trade}`);
+  equityChart.data.datasets[0].data = source.map(p => p.equity);
   
-  // Update starting balance annotation
-  equityChart.options.plugins.annotation.annotations.startingBalance.yMin = startingBalance;
-  equityChart.options.plugins.annotation.annotations.startingBalance.yMax = startingBalance;
-  
-  // Update point colors for the new starting balance
-  equityChart.data.datasets[0].pointBackgroundColor = function(context) {
-    const value = context.parsed.y;
-    return value >= startingBalance ? '#10b981' : '#ef4444';
-  };
-  equityChart.data.datasets[0].pointBorderColor = function(context) {
-    const value = context.parsed.y;
-    return value >= startingBalance ? '#10b981' : '#ef4444';
-  };
-  
-  // Update segment colors for the new starting balance
-  equityChart.data.datasets[0].segment.borderColor = function(ctx) {
-    const prev = ctx.p0.parsed.y;
-    const next = ctx.p1.parsed.y;
-    
-    if (prev >= startingBalance && next >= startingBalance) {
-      return '#10b981';
-    } else if (prev < startingBalance && next < startingBalance) {
-      return '#ef4444';
-    } else {
-      return undefined; // Will use the main gradient
-    }
-  };
-  
-  // Update line border color gradient function with new starting balance
-  equityChart.data.datasets[0].borderColor = function(context) {
-    const chart = context.chart;
-    const {ctx, chartArea} = chart;
-    if (!chartArea) return '#10b981';
-    
-    const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
-    const yScale = chart.scales.y;
-    const startingBalanceY = yScale.getPixelForValue(startingBalance);
-    const totalHeight = chartArea.bottom - chartArea.top;
-    const startingBalanceRatio = 1 - ((startingBalanceY - chartArea.top) / totalHeight);
-    
-    gradient.addColorStop(0, '#ef4444');
-    gradient.addColorStop(Math.max(0, Math.min(1, startingBalanceRatio - 0.01)), '#ef4444');
-    gradient.addColorStop(Math.max(0, Math.min(1, startingBalanceRatio + 0.01)), '#10b981');
-    gradient.addColorStop(1, '#10b981');
-    return gradient;
-  };
-
-  // Update fill colors for the new starting balance
+  // Update the fill configuration
   equityChart.data.datasets[0].fill = {
-    target: { value: startingBalance },
-    above: 'rgba(16, 185, 129, 0.1)',
-    below: 'rgba(239, 68, 68, 0.1)'
+    target: {
+      value: startingBalance
+    },
+    above: 'rgba(16, 185, 129, 0.1)', // Green fill above starting balance
+    below: 'rgba(239, 68, 68, 0.1)'   // Red fill below starting balance
   };
+  
+  // Update annotation
+  if (equityChart.options.plugins.annotation) {
+    equityChart.options.plugins.annotation.annotations.startingBalance.yMin = startingBalance;
+    equityChart.options.plugins.annotation.annotations.startingBalance.yMax = startingBalance;
+  }
   
   equityChart.update();
   
-  document.getElementById('equityByTrades').classList.toggle('bg-[#2a2a2a]', view === 'trades');
-  document.getElementById('equityByTrades').classList.toggle('bg-[#1a1a1a]', view !== 'trades');
-  document.getElementById('equityByTrades').classList.toggle('text-white', view === 'trades');
-  document.getElementById('equityByTrades').classList.toggle('text-gray-400', view !== 'trades');
+  document.getElementById('equityByTrades').classList.toggle('bg-[#2a2a2a]', mode === 'trades');
+  document.getElementById('equityByTrades').classList.toggle('bg-[#1a1a1a]', mode === 'days');
+  document.getElementById('equityByTrades').classList.toggle('text-gray-400', mode === 'days');
+  
+  document.getElementById('equityByDays').classList.toggle('bg-[#2a2a2a]', mode === 'days');
+  document.getElementById('equityByDays').classList.toggle('bg-[#1a1a1a]', mode === 'trades');
+  document.getElementById('equityByDays').classList.toggle('text-gray-400', mode === 'trades');
+};
 
-  document.getElementById('equityByDays').classList.toggle('bg-[#2a2a2a]', view === 'days');
-  document.getElementById('equityByDays').classList.toggle('bg-[#1a1a1a]', view !== 'days');
-  document.getElementById('equityByDays').classList.toggle('text-white', view === 'days');
-  document.getElementById('equityByDays').classList.toggle('text-gray-400', view !== 'days');
-}
-
-// Calendar functions
-let currentCalendarDate = new Date();
+// Calendar
+let calendarYear = new Date().getFullYear();
+let calendarMonth = new Date().getMonth();
+let weekPnLCarryover = 0; // Carry over P&L from previous month
+let weekNumberCarryover = 1; // Carry over week number
 
 function renderCalendar() {
-  const calendarGrid = document.getElementById('calendarGrid');
-  calendarGrid.innerHTML = '';
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                  'July', 'August', 'September', 'October', 'November', 'December'];
   
-  const month = currentCalendarDate.getMonth();
-  const year = currentCalendarDate.getFullYear();
+  document.getElementById('calendarMonthYear').textContent = `${months[calendarMonth]} ${calendarYear}`;
   
-  document.getElementById('calendarMonthYear').textContent = 
-    currentCalendarDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-    
-  const firstDayOfMonth = new Date(year, month, 1);
-  const lastDayOfMonth = new Date(year, month + 1, 0);
+  // Get calendar data for current month
+  const monthKey = `${calendarYear}-${calendarMonth}`;
+  const calendarData = rawData.calendar?.[monthKey] || {};
   
-  // Adjust start day for Monday-first week (0=Sunday, 1=Monday, ..., 6=Saturday)
-  let startDay = firstDayOfMonth.getDay();
-  startDay = startDay === 0 ? 6 : startDay - 1; // Convert Sunday (0) to 6 (end of week), shift others
+  // Calculate days in month and first day of week
+  const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
+  const firstDayOfWeek = new Date(calendarYear, calendarMonth, 1).getDay();
+  const startOffset = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1; // Monday start
   
-  // Add empty divs for preceding days
-  for (let i = 0; i < startDay; i++) {
-    calendarGrid.innerHTML += '<div></div>';
+  // Current date info
+  const today = new Date();
+  const isCurrentMonth = today.getFullYear() === calendarYear && today.getMonth() === calendarMonth;
+  const currentDate = today.getDate();
+  
+  // Build calendar HTML
+  let calendarHTML = '';
+  let weekPnL = weekPnLCarryover; // Start with carryover from previous month
+  let weekNumber = weekNumberCarryover;
+  
+  // Add empty cells for days before month starts
+  for (let i = 0; i < startOffset; i++) {
+    calendarHTML += '<div class="h-16"></div>';
   }
   
-  for (let day = 1; day <= lastDayOfMonth.getDate(); day++) {
-    const date = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const dayData = rawData.calendar?.[date];
-    const pnl = dayData ? parseFloat(dayData.pnl) : 0;
-    const trades = dayData ? parseInt(dayData.trades) : 0;
+  // Add days of the month
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dayData = calendarData[day];
+    const hasTrades = dayData && dayData.trades > 0;
+    const dayPnL = hasTrades ? dayData.pnl : 0;
     
-    let dayColorClass = 'text-gray-600'; // Default for no trading
-    if (trades > 0) {
-      dayColorClass = pnl >= 0 ? 'bg-green-700 hover:bg-green-600' : 'bg-red-700 hover:bg-red-600';
+    // Accumulate weekly P&L
+    weekPnL += dayPnL;
+    
+    // Determine styling
+    let bgClass = 'bg-[#1a1a1a] border-[#2a2a2a]';
+    if (hasTrades) {
+      bgClass = dayPnL >= 0 
+        ? 'bg-green-900/30 border-green-600/50' 
+        : 'bg-red-900/30 border-red-600/50';
     }
     
-    // Check if it's Saturday for weekly summary
-    const currentDayDate = new Date(year, month, day);
-    const isSaturday = currentDayDate.getDay() === 6; // 6 for Saturday
-    let showWeeklySummary = false;
-    let weekPnL = 0;
-    let weekNumber = 0;
-
-    if (isSaturday) {
-      const weekStart = new Date(currentDayDate);
-      weekStart.setDate(currentDayDate.getDate() - 5); // Go back to Monday of the current week (Saturday - 5 days)
-
-      weekPnL = 0;
-      let tradesInWeek = 0;
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(weekStart);
-        d.setDate(weekStart.getDate() + i);
-        const d_str = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        if (rawData.calendar?.[d_str]) {
-          weekPnL += parseFloat(rawData.calendar[d_str].pnl);
-          tradesInWeek += parseInt(rawData.calendar[d_str].trades);
-        }
-      }
-      
-      if (tradesInWeek > 0) {
-        showWeeklySummary = true;
-        // Calculate week number based on ISO 8601
-        const jan1 = new Date(year, 0, 1);
-        const days = Math.floor((currentDayDate - jan1) / (24 * 60 * 60 * 1000));
-        weekNumber = Math.ceil((days + jan1.getDay() + 1) / 7);
-      }
-    }
+    const isToday = isCurrentMonth && day === currentDate;
+    const todayClass = isToday ? ' ring-2 ring-blue-400' : '';
     
-    let tooltipHTML = '';
-    if (trades > 0) {
-      tooltipHTML = `
-        <div class="calendar-tooltip text-left text-xs">
-          <p class="font-bold mb-1">${date}</p>
-          <p>P&L: <span class="${pnl >= 0 ? 'text-green-400' : 'text-red-400'}">${formatMoney(pnl)}</span></p>
-          <p>Trades: ${trades}</p>
-        </div>
+    // Check if it's Saturday
+    const currentDayDate = new Date(calendarYear, calendarMonth, day);
+    const dayOfWeek = currentDayDate.getDay();
+    const isSaturday = dayOfWeek === 6;
+    
+    // Determine if we should show weekly summary
+    const showWeeklySummary = isSaturday && Math.abs(weekPnL) > 0.01;
+    
+    // Get trades for this day
+    const dayTrades = rawData.trades.filter(t => {
+      const tradeDate = new Date(t.date);
+      return tradeDate.getFullYear() === calendarYear && 
+             tradeDate.getMonth() === calendarMonth && 
+             tradeDate.getDate() === day;
+    });
+    
+    // Start building day cell
+    const cellHeight = (showWeeklySummary || (isToday && isSaturday)) ? 'h-20' : 'h-16';
+    const cellSpacing = showWeeklySummary ? 'space-y-0.5' : '';
+    calendarHTML += `
+      <div class="calendar-day ${cellHeight} rounded border ${bgClass}${todayClass} flex flex-col items-center justify-center ${cellSpacing} text-sm relative overflow-visible">
+        <span class="font-medium text-sm">${day}</span>
+    `;
+    
+    if (hasTrades) {
+      calendarHTML += `
+        <span class="text-xs ${dayPnL >= 0 ? 'text-green-400' : 'text-red-400'}">
+          ${dayPnL >= 0 ? '+' : ''}${dayPnL.toFixed(0)}
+        </span>
+        <span class="text-xs text-gray-500">${dayData.trades} trades</span>
       `;
+      
+      // Add tooltip for trades
+      if (dayTrades.length > 0) {
+        calendarHTML += `
+          <div class="calendar-tooltip">
+            <div class="font-semibold mb-2">${months[calendarMonth]} ${day}</div>
+            <div class="text-xs space-y-1">
+              ${dayTrades.map(trade => `
+                <div class="flex justify-between items-center">
+                  <span>${trade.symbol} ${trade.side === 'Long' || trade.side === 'BUY' ? '↑' : '↓'}</span>
+                  <span class="${parseMoneyValue(trade.p_l) >= 0 ? 'text-green-400' : 'text-red-400'}">
+                    ${parseMoneyValue(trade.p_l) >= 0 ? '+' : ''}${parseMoneyValue(trade.p_l).toFixed(0)}
+                  </span>
+                </div>
+              `).join('')}
+              <div class="border-t border-[#3a3a3a] pt-1 mt-1 font-semibold flex justify-between">
+                <span>Total:</span>
+                <span class="${dayPnL >= 0 ? 'text-green-400' : 'text-red-400'}">
+                  ${dayPnL >= 0 ? '+' : ''}${dayPnL.toFixed(0)}
+                </span>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    } else if (isToday) {
+      calendarHTML += '<span class="text-blue-400 text-xs">Today</span>';
     }
-
-    if (isSaturday && showWeeklySummary) {
+    
+    // Add weekly summary ONLY on Saturdays
+    if (showWeeklySummary) {
       // Saturday with weekly summary - show weekly P&L and week number
       const weekPnLFormatted = weekPnL >= 0 ? `+$${Math.abs(weekPnL).toFixed(2)}` : `-$${Math.abs(weekPnL).toFixed(2)}`;
       calendarHTML += `
@@ -1164,128 +1125,151 @@ function renderCalendar() {
         </span>
         <span class="text-xs text-gray-500">Week ${weekNumber}</span>
       `;
-      let calendarHTML = `
-        <div class="calendar-day p-2 rounded-lg flex flex-col items-center justify-center text-white
-                    ${trades > 0 ? dayColorClass : 'bg-[#1a1a1a] border border-[#2a2a2a]'}">
-          <span class="text-lg font-bold">${day}</span>
-          ${tooltipHTML}
-          ${showWeeklySummary ? `
-            <div class="mt-1 text-center">
-              <span class="text-xs font-bold ${weekPnL >= 0 ? 'text-green-400' : 'text-red-400'}">
-                ${weekPnLFormatted}
-              </span>
-              <span class="text-xs text-gray-500">Week ${weekNumber}</span>
-            </div>
-          ` : ''}
-        </div>
-      `;
-      calendarGrid.innerHTML += calendarHTML;
-
-    } else {
-      // Normal day or Saturday without weekly summary
-      let calendarHTML = `
-        <div class="calendar-day p-2 rounded-lg flex flex-col items-center justify-center text-white
-                    ${trades > 0 ? dayColorClass : 'bg-[#1a1a1a] border border-[#2a2a2a]'}">
-          <span class="text-lg font-bold">${day}</span>
-          ${tooltipHTML}
-        </div>
-      `;
-      calendarGrid.innerHTML += calendarHTML;
+      weekPnL = 0;
+      weekNumber++;
     }
-  }
-}
-
-function changeCalendarMonth(offset) {
-  currentCalendarDate.setMonth(currentCalendarDate.getMonth() + offset);
-  renderCalendar();
-}
-
-// Display trades table
-function displayTrades() {
-  const tableBody = document.getElementById('tradesTableBody');
-  tableBody.innerHTML = '';
-  
-  const startIndex = (currentPage - 1) * tradesPerPage;
-  const endIndex = startIndex + tradesPerPage;
-  const tradesToDisplay = filteredTrades.slice(startIndex, endIndex);
-  
-  if (tradesToDisplay.length === 0) {
-    tableBody.innerHTML = `<tr><td colspan="9" class="py-4 text-center text-gray-500">No trades to display.</td></tr>`;
-    document.getElementById('paginationInfo').textContent = 'No trades';
-    document.getElementById('prevPage').disabled = true;
-    document.getElementById('nextPage').disabled = true;
-    return;
-  }
-  
-  tradesToDisplay.forEach(trade => {
-    const netPnL = getNetPnL(trade);
-    const pnlClass = netPnL >= 0 ? 'text-green-400' : 'text-red-400';
-    const screenshot = driveUrls(trade.Chart);
     
-    tableBody.innerHTML += `
-      <tr class="trade-row border-b border-[#1a1a1a]">
-        <td class="py-3 px-4">${trade['Trade ID']}</td>
-        <td class="py-3 px-4">${trade.date}</td>
-        <td class="py-3 px-4">${trade.symbol}</td>
-        <td class="py-3 px-4 hide-mobile">${trade.Side}</td>
-        <td class="py-3 px-4 hide-mobile">$${parseMoneyValue(trade.Entry).toFixed(2)}</td>
-        <td class="py-3 px-4 hide-mobile">$${parseMoneyValue(trade.Exit).toFixed(2)}</td>
-        <td class="py-3 px-4 text-right ${pnlClass}">${formatMoney(netPnL)}</td>
-        <td class="py-3 px-4 text-right hide-mobile">$${parseMoneyValue(trade.Balance).toFixed(2)}</td>
-        <td class="py-3 px-4 text-center">
-          ${screenshot.thumb ? `
-            <a href="${screenshot.full}" target="_blank" rel="noopener noreferrer" class="text-green-500 hover:text-green-400 screenshot-link">
-              <svg class="w-5 h-5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L20 20m-4-4l-1.586-1.586a2 2 0 00-2.828 0L12 14.414m-3.414-3.414a2 2 0 00-2.828 0L4 12m14 0a2 2 0 100-4 2 2 0 000 4z"></path>
-              </svg>
+    calendarHTML += '</div>';
+  }
+  
+  // Store carryover values for next month
+  weekPnLCarryover = weekPnL;
+  weekNumberCarryover = weekNumber;
+  
+  // Update calendar grid
+  const calendarGrid = document.getElementById('calendarGrid');
+  if (calendarGrid) {
+    calendarGrid.innerHTML = calendarHTML;
+  }
+}
+
+window.changeCalendarMonth = (delta) => {
+  calendarMonth += delta;
+  if (calendarMonth < 0) {
+    calendarMonth = 11;
+    calendarYear--;
+    // Reset carryovers when going backwards
+    weekPnLCarryover = 0;
+    weekNumberCarryover = 1;
+  } else if (calendarMonth > 11) {
+    calendarMonth = 0;
+    calendarYear++;
+  }
+  renderCalendar();
+};
+
+// Trades table with pagination
+function displayTrades(page = 1) {
+  const startIndex = (page - 1) * tradesPerPage;
+  const endIndex = Math.min(startIndex + tradesPerPage, filteredTrades.length);
+  const tradesToShow = filteredTrades.slice(startIndex, endIndex);
+  
+  const tbody = document.getElementById('tradesTableBody');
+  tbody.innerHTML = tradesToShow.map(trade => {
+    const pnl = parseMoneyValue(trade.p_l || 0);
+    const { thumb, full } = driveUrls(trade.screenshot_url_A || trade.screenshot_url_B || trade.screenshot_url_C);
+    
+    return `
+      <tr class="trade-row border-b border-[#2a2a2a] transition-colors" data-symbol="${(trade.symbol || '').toLowerCase()}" data-pnl="${pnl}">
+        <td class="py-3 px-4 text-sm font-mono">${trade.trade_id || '-'}</td>
+        <td class="py-3 px-4 text-sm text-gray-300">${trade.date || '-'}</td>
+        <td class="py-3 px-4 text-sm font-medium">${trade.symbol || '-'}</td>
+        <td class="py-3 px-4 text-sm hide-mobile">
+          <span class="px-2 py-1 text-xs rounded ${trade.side === 'Long' || trade.side === 'BUY' ? 'bg-green-900/30 text-green-400' : 'bg-red-900/30 text-red-400'}">
+            ${trade.side || '-'}
+          </span>
+        </td>
+        <td class="py-3 px-4 text-sm text-gray-300 hide-mobile">${parseFloat(trade.entry_price || 0).toFixed(2)}</td>
+        <td class="py-3 px-4 text-sm text-gray-300 hide-mobile">${parseFloat(trade.exit_price || 0).toFixed(2)}</td>
+        <td class="py-3 px-4 text-sm font-bold text-right ${pnl >= 0 ? 'text-green-400' : 'text-red-400'}">
+          ${formatMoney(pnl)}
+        </td>
+        <td class="py-3 px-4 text-sm text-right hide-mobile">
+          ${trade.Balance ? `${parseFloat(trade.Balance).toFixed(2)}` : '-'}
+        </td>
+        <td class="py-3 px-4 text-sm text-center">
+          ${full ? `
+            <div class="screenshot-link">
+              <a href="${full}" target="_blank" class="text-blue-400 hover:text-blue-300 underline">
+                View
+              </a>
               <div class="screenshot-preview">
-                <img src="${screenshot.thumb}" alt="Chart Screenshot"/>
+                ${thumb ? `<img src="${thumb}" loading="lazy" alt="Trade Screenshot">` : ''}
               </div>
-            </a>
-          ` : '—'}
+            </div>
+          ` : '<span class="text-gray-500">-</span>'}
         </td>
       </tr>
     `;
-  });
+  }).join('');
   
-  updatePaginationInfo();
-}
-
-function updatePaginationInfo() {
-  const totalPages = Math.ceil(filteredTrades.length / tradesPerPage);
+  // Update pagination
   document.getElementById('paginationInfo').textContent = 
-    `Page ${currentPage} of ${totalPages} (${filteredTrades.length} trades)`;
+    filteredTrades.length > 0 ? `Showing ${startIndex + 1}-${endIndex} of ${filteredTrades.length}` : 'No trades';
   
-  document.getElementById('prevPage').disabled = currentPage === 1;
-  document.getElementById('nextPage').disabled = currentPage === totalPages || totalPages === 0;
+  const totalPages = Math.ceil(filteredTrades.length / tradesPerPage);
+  document.getElementById('prevPage').disabled = page === 1;
+  document.getElementById('nextPage').disabled = page >= totalPages;
+  
+  currentPage = page;
 }
 
-function changePage(offset) {
-  currentPage += offset;
-  displayTrades();
-}
+window.changePage = (delta) => {
+  const totalPages = Math.ceil(filteredTrades.length / tradesPerPage);
+  const newPage = currentPage + delta;
+  if (newPage >= 1 && newPage <= totalPages) {
+    displayTrades(newPage);
+  }
+};
 
-function filterTrades() {
+window.filterTrades = () => {
   const searchTerm = document.getElementById('tradeSearch').value.toLowerCase();
   const filterType = document.getElementById('tradeFilter').value;
   
   filteredTrades = allTrades.filter(trade => {
-    const matchesSearch = searchTerm === '' || 
-      Object.values(trade).some(value => 
-        String(value).toLowerCase().includes(searchTerm)
-      );
-      
-    const netPnL = getNetPnL(trade);
-    const matchesFilter = filterType === '' || 
-      (filterType === 'win' && netPnL > 0) ||
-      (filterType === 'loss' && netPnL < 0);
-      
+    const symbol = (trade.symbol || '').toLowerCase();
+    const pnl = parseMoneyValue(trade.p_l);
+    
+    let matchesSearch = !searchTerm || symbol.includes(searchTerm);
+    let matchesFilter = true;
+    
+    if (filterType === 'win') matchesFilter = pnl > 0;
+    else if (filterType === 'loss') matchesFilter = pnl < 0;
+    
     return matchesSearch && matchesFilter;
   });
   
-  currentPage = 1; // Reset to first page on filter/search
-  displayTrades();
-}
+  currentPage = 1;
+  displayTrades(1);
+};
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey || e.metaKey) return;
+  
+  switch(e.key.toLowerCase()) {
+    case 'r':
+      e.preventDefault();
+      location.reload();
+      break;
+    case 'arrowleft':
+      e.preventDefault();
+      if (e.shiftKey) {
+        changeCalendarMonth(-1);
+      } else {
+        changePage(-1);
+      }
+      break;
+    case 'arrowright':
+      e.preventDefault();
+      if (e.shiftKey) {
+        changeCalendarMonth(1);
+      } else {
+        changePage(1);
+      }
+      break;
+  }
+});
 </script>
 </body>
 </html>
