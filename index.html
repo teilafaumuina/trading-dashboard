@@ -1072,7 +1072,7 @@ function renderCalendar() {
     });
     
     // Start building day cell
-    const cellHeight = showWeeklySummary ? 'h-20' : 'h-16';
+    const cellHeight = (showWeeklySummary || (isToday && isSaturday)) ? 'h-20' : 'h-16';
     const cellSpacing = showWeeklySummary ? 'space-y-0.5' : '';
     calendarHTML += `
       <div class="calendar-day ${cellHeight} rounded border ${bgClass}${todayClass} flex flex-col items-center justify-center ${cellSpacing} text-sm relative overflow-visible">
