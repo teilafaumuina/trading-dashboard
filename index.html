@@ -30,11 +30,23 @@
       cursor: pointer;
     }
     
-    .calendar-day:hover {
-      transform: scale(1.05);
-      z-index: 10;
-      box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
-    }
+   .calendar-day-profit:hover {
+  transform: scale(1.05);
+  z-index: 10;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+}
+
+.calendar-day-loss:hover {
+  transform: scale(1.05);
+  z-index: 10;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+}
+
+.calendar-day-neutral:hover {
+  transform: scale(1.05);
+  z-index: 10;
+  box-shadow: 0 0 20px rgba(107, 114, 128, 0.3);
+}
     
     .calendar-tooltip {
       position: absolute;
@@ -1071,9 +1083,12 @@ function renderCalendar() {
              tradeDate.getDate() === day;
     });
     
+// Determine hover shadow class based on P&L
+    const hoverClass = hasTrades ? (dayPnL >= 0 ? 'calendar-day-profit' : 'calendar-day-loss') : 'calendar-day-neutral';
+    
     // All cells use same height - no dynamic sizing
     calendarHTML += `
-      <div class="calendar-day h-16 rounded border ${bgClass}${todayClass} flex flex-col items-center justify-center text-sm relative overflow-visible">
+      <div class="calendar-day ${hoverClass} h-16 rounded border ${bgClass}${todayClass} flex flex-col items-center justify-center text-sm relative overflow-visible">
         <span class="font-medium text-sm">${day}</span>
     `;
     
