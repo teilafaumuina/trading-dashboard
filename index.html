@@ -168,20 +168,24 @@
     }
     
     /* Mobile responsive table */
-    @media (max-width: 768px) {
-      .table-container {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-      }
-      
-      table {
-        min-width: 600px;
-      }
-      
-      .hide-mobile {
-        display: none;
-      }
-    }
+@media (max-width: 768px) {
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  table {
+    min-width: 600px;
+  }
+  
+  .hide-mobile {
+    display: none;
+  }
+  
+  .trade-count-mobile {
+    display: none;
+  }
+}
   </style>
 </head>
 <body class="bg-[#0a0a0a] text-white">
@@ -1092,12 +1096,12 @@ function renderCalendar() {
         <span class="font-medium text-sm">${day}</span>
     `;
     
-    if (hasTrades) {
+if (hasTrades) {
       calendarHTML += `
         <span class="text-xs ${dayPnL >= 0 ? 'text-green-400' : 'text-red-400'}">
           ${dayPnL >= 0 ? '+' : ''}${dayPnL.toFixed(0)}
         </span>
-        <span class="text-xs text-gray-500">${dayData.trades} trades</span>
+        <span class="text-xs text-gray-500 trade-count-mobile">${dayData.trades} trades</span>
       `;
       
       // Add tooltip for trades
