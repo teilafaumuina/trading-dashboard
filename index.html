@@ -1060,9 +1060,6 @@ function renderCalendar() {
     const dayOfWeek = currentDayDate.getDay();
     const isSaturday = dayOfWeek === 6;
     
-    // Determine if we should show weekly summary
-    const showWeeklySummary = isSaturday && Math.abs(weekPnL) > 0.01;
-    
     // Get trades for this day
     const dayTrades = rawData.trades.filter(t => {
       const tradeDate = new Date(t.date);
@@ -1071,11 +1068,9 @@ function renderCalendar() {
              tradeDate.getDate() === day;
     });
     
-    // Start building day cell
-    const cellHeight = (showWeeklySummary || (isToday && isSaturday)) ? 'h-20' : 'h-16';
-    const cellSpacing = showWeeklySummary ? 'space-y-0.5' : '';
+    // All cells have same height - removed dynamic sizing
     calendarHTML += `
-      <div class="calendar-day ${cellHeight} rounded border ${bgClass}${todayClass} flex flex-col items-center justify-center ${cellSpacing} text-sm relative overflow-visible">
+      <div class="calendar-day h-16 rounded border ${bgClass}${todayClass} flex flex-col items-center justify-center text-sm relative overflow-visible">
         <span class="font-medium text-sm">${day}</span>
     `;
     
@@ -1115,16 +1110,8 @@ function renderCalendar() {
       calendarHTML += '<span class="text-blue-400 text-xs">Today</span>';
     }
     
-    // Add weekly summary ONLY on Saturdays
-    if (showWeeklySummary) {
-      // Saturday with weekly summary - show weekly P&L and week number
-      const weekPnLFormatted = weekPnL >= 0 ? `+$${Math.abs(weekPnL).toFixed(2)}` : `-$${Math.abs(weekPnL).toFixed(2)}`;
-      calendarHTML += `
-        <span class="text-xs font-bold ${weekPnL >= 0 ? 'text-green-400' : 'text-red-400'}">
-          ${weekPnLFormatted}
-        </span>
-        <span class="text-xs text-gray-500">Week ${weekNumber}</span>
-      `;
+    // Reset weekly counters on Saturday but don't show weekly summary in the cell
+    if (isSaturday) {
       weekPnL = 0;
       weekNumber++;
     }
