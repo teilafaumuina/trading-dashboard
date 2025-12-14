@@ -23,8 +23,6 @@
 
     /* Calendar Grid */
     .calendar-grid-8 { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; }
-    
-    /* Calendar Styling */
     .calendar-day { position: relative; transition: all 0.2s ease; cursor: pointer; border: 1px solid #2a2a2a; }
     .calendar-day:hover { z-index: 10; transform: scale(1.05); }
     .current-day { box-shadow: 0 0 0 2px #3b82f6; z-index: 5; }
@@ -124,7 +122,6 @@
 
         <!-- Data Area -->
         <div class="w-full lg:w-1/4 bg-[#111] overflow-y-auto h-1/2 lg:h-full flex flex-col divide-y divide-[#2a2a2a]">
-          <!-- Prices -->
           <div class="grid grid-cols-2">
             <div class="p-4 border-r border-[#2a2a2a]">
               <span class="text-[10px] uppercase text-gray-500 font-bold">Entry</span>
@@ -136,14 +133,12 @@
             </div>
           </div>
           
-          <!-- Details -->
           <div class="p-5 space-y-3">
             <div class="flex justify-between"><span class="text-sm text-gray-400">Setup</span><span id="m_setup" class="text-sm text-white">--</span></div>
             <div class="flex justify-between"><span class="text-sm text-gray-400">Session</span><span id="m_session" class="text-sm text-white">--</span></div>
             <div class="flex justify-between"><span class="text-sm text-gray-400">Score</span><span id="m_score" class="text-sm font-bold text-yellow-400">--</span></div>
           </div>
 
-          <!-- Execution Tags -->
           <div class="p-5 space-y-3">
             <h3 class="text-[10px] uppercase text-gray-500 font-bold tracking-wider mb-2">Process Checklist</h3>
             <div class="flex justify-between items-center"><span class="text-sm text-gray-400">Pre-Trade</span><span id="m_tag_pre" class="process-tag">--</span></div>
@@ -152,7 +147,6 @@
             <div class="flex justify-between items-center"><span class="text-sm text-gray-400">Exit</span><span id="m_tag_exit" class="process-tag">--</span></div>
           </div>
 
-          <!-- Notes -->
           <div class="p-5 flex-1">
             <h3 class="text-[10px] uppercase text-gray-500 font-bold tracking-wider mb-3">Journal Notes</h3>
             <div class="bg-[#181818] p-4 rounded border border-[#2a2a2a] min-h-[100px]">
@@ -191,7 +185,7 @@
     <!-- Metrics -->
     <div id="metricsContainer" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8"></div>
 
-    <!-- Equity -->
+    <!-- Equity Curve -->
     <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a] mb-8">
       <div class="flex justify-between items-center mb-4">
         <h2 class="text-lg font-semibold">Equity Curve</h2>
@@ -222,28 +216,59 @@
       </div>
     </div>
 
-    <!-- 3-PANEL ANALYSIS (Fixed Layout) -->
+    <!-- 3-PANEL ANALYSIS (Fixed) -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 h-auto lg:h-[400px]">
       
-      <!-- Panel 1: By Symbol -->
+      <!-- Panel 1: By Symbol (No Chart) -->
       <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a] flex flex-col min-h-[350px]">
-        <h2 class="text-lg font-semibold mb-4">By Symbol</h2>
+        <h2 class="text-lg font-semibold mb-4">Performance By Symbol</h2>
         <div id="symbolPerformance" class="space-y-2 mb-4 overflow-y-auto flex-1 pr-2"></div>
-        <div class="h-32 relative shrink-0"><canvas id="symbolChart"></canvas></div>
       </div>
 
       <!-- Panel 2: By Time -->
       <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a] flex flex-col min-h-[350px]">
-        <h2 class="text-lg font-semibold mb-4">By Time</h2>
+        <h2 class="text-lg font-semibold mb-4">Performance By Time</h2>
         <div class="relative flex-1 w-full"><canvas id="timeAnalysisChart"></canvas></div>
       </div>
 
       <!-- Panel 3: By Day -->
       <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a] flex flex-col min-h-[350px]">
-        <h2 class="text-lg font-semibold mb-4">By Day</h2>
+        <h2 class="text-lg font-semibold mb-4">Performance By Day</h2>
         <div class="relative flex-1 w-full"><canvas id="weekdayChart"></canvas></div>
       </div>
+    </div>
 
+    <!-- 🌟 NEW: LATEST EXECUTION WIDGET -->
+    <div id="lastTradeWidget" class="hidden bg-[#111] rounded-xl border border-[#2a2a2a] mb-8 overflow-hidden group cursor-pointer hover:border-[#444] transition-all" onclick="openLastTrade()">
+      <div class="flex flex-col md:flex-row h-[350px]">
+        <!-- Image Area (70%) -->
+        <div class="w-full md:w-3/4 bg-black relative flex items-center justify-center border-b md:border-b-0 md:border-r border-[#2a2a2a] overflow-hidden">
+          <img id="lt_image" class="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105" src="" alt="Last Trade">
+          <div id="lt_no_image" class="hidden flex flex-col items-center text-gray-600">
+            <span class="text-4xl mb-2 opacity-30">📷</span><span>No Screenshot</span>
+          </div>
+          <div class="absolute top-4 left-4 bg-black/60 backdrop-blur px-3 py-1 rounded text-xs font-bold text-gray-300 border border-white/10">LATEST EXECUTION</div>
+        </div>
+        
+        <!-- Info Area (30%) -->
+        <div class="w-full md:w-1/4 p-8 flex flex-col justify-center bg-gradient-to-b from-[#161616] to-[#111]">
+          <div class="mb-6">
+            <span class="text-xs text-gray-500 uppercase font-bold tracking-wider">Symbol</span>
+            <h3 id="lt_symbol" class="text-3xl font-bold text-white mt-1">--</h3>
+            <span id="lt_side" class="text-xs font-bold px-2 py-0.5 rounded bg-[#222] text-gray-300 mt-2 inline-block">--</span>
+          </div>
+          
+          <div class="mb-8">
+            <span class="text-xs text-gray-500 uppercase font-bold tracking-wider">Result</span>
+            <h3 id="lt_pnl" class="text-4xl font-bold mt-1">--</h3>
+            <p id="lt_date" class="text-sm text-gray-400 mt-2">--</p>
+          </div>
+
+          <button class="w-full py-3 bg-[#222] hover:bg-[#333] border border-[#333] text-white rounded text-sm font-bold transition-colors flex items-center justify-center gap-2">
+            View Full Journal <span>→</span>
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Insights -->
@@ -269,7 +294,7 @@
         <table class="w-full text-sm text-left">
           <thead class="text-xs text-gray-500 uppercase bg-[#111] border-b border-[#2a2a2a]">
             <tr>
-              <th class="py-3 px-4">ID</th><th class="py-3 px-4">Date</th><th class="py-3 px-4">Symbol</th>
+              <th class="py-3 px-4">Trade ID</th><th class="py-3 px-4">Date</th><th class="py-3 px-4">Symbol</th>
               <th class="py-3 px-4 hide-mobile">Side</th><th class="py-3 px-4 hide-mobile">Entry</th>
               <th class="py-3 px-4 hide-mobile">Exit</th><th class="py-3 px-4 text-right">P&L</th>
               <th class="py-3 px-4 text-right hide-mobile">Balance</th><th class="py-3 px-4 text-center">View</th>
@@ -369,6 +394,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 function initDashboard() {
   document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
   buildMetrics(); buildSymbolPerformance(); buildEvaluationPanel(); buildInsights();
+  renderLastTradeWidget(); // New Widget
   initCharts(); renderCalendar(); displayTrades();
 }
 
@@ -385,6 +411,34 @@ function buildSymbolPerformance() {
       </div>
     </div>`;
   }).join('');
+}
+
+function renderLastTradeWidget() {
+  const t = allTrades[0];
+  if(!t) return;
+  
+  const widget = document.getElementById('lastTradeWidget');
+  widget.classList.remove('hidden');
+  
+  const {full} = driveUrls(t.screenshot||t.screenshot_url_A);
+  const img = document.getElementById('lt_image');
+  const noImg = document.getElementById('lt_no_image');
+  
+  if(full) { img.src = full; img.classList.remove('hidden'); noImg.classList.add('hidden'); }
+  else { img.classList.add('hidden'); noImg.classList.remove('hidden'); }
+  
+  document.getElementById('lt_symbol').textContent = t.symbol;
+  document.getElementById('lt_side').textContent = t.side || 'FLAT';
+  document.getElementById('lt_date').textContent = `${t.date} at ${t.entry_time}`;
+  
+  const pnl = parseMoneyValue(t.p_l);
+  const pnlEl = document.getElementById('lt_pnl');
+  pnlEl.textContent = formatMoney(pnl);
+  pnlEl.className = `text-4xl font-bold mt-1 ${pnl>=0?'text-green-400':'text-red-400'}`;
+}
+
+function openLastTrade() {
+  if(allTrades.length > 0) openTradeModal(allTrades[0].trade_id);
 }
 
 function buildInsights() {
@@ -537,6 +591,7 @@ function renderCalendar() {
         const wBg = isProfit ? 'bg-green-900/10' : 'bg-red-900/10';
         const wBorder = isProfit ? 'border-green-900/40' : 'border-red-900/40';
         const wTxt = isProfit ? 'text-green-400' : 'text-red-400';
+        
         wHtml = `<div class="h-20 rounded-lg border ${wBorder} ${wBg} flex flex-col items-center justify-center relative week-total">
           <span class="text-[9px] uppercase text-gray-500 font-bold mb-1 opacity-70">Week</span>
           <span class="text-sm font-bold ${wTxt}">${formatMoney(weekPnL)}</span>
@@ -585,14 +640,8 @@ function initCharts() {
     options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
   });
   
-  const sData = Object.entries(rawData.symbols).sort((a,b)=>b[1].pnl-a[1].pnl).slice(0,5);
-  buildSymbolPerformance(); 
-  new Chart(document.getElementById('symbolChart'), {
-    type: 'bar',
-    data: { labels: sData.map(x=>x[0]), datasets:[{data: sData.map(x=>x[1].pnl), backgroundColor: sData.map(x=>x[1].pnl>=0?'#10b981':'#ef4444')}] },
-    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, indexAxis:'y' }
-  });
-
+  // No Chart for Symbol Panel anymore, just list
+  
   const wDays=['Monday','Tuesday','Wednesday','Thursday','Friday'];
   new Chart(document.getElementById('weekdayChart'), {
     type: 'bar',
