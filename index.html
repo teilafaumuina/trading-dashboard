@@ -6,55 +6,51 @@
   <title>Teila's Trading Dashboard</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>"/>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-  <!-- ChartJS Annotation Plugin for specific coloring if needed, though we use scriptable options here -->
+  
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
     
     body { margin: 0; background: #0a0a0a; color: #fff; font-family: 'Inter', sans-serif; }
     
-    /* Custom Scrollbar */
+    /* Scrollbar */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #1a1a1a; }
     ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: #444; }
 
-    /* Calendar Grid - 8 Columns for Weekly Total */
-    .calendar-grid-8 { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 0.5rem; }
+    /* Calendar Grid - 8 Columns */
+    .calendar-grid-8 { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; }
     
     /* Calendar Styling */
-    .calendar-day { position: relative; transition: all 0.2s ease; cursor: pointer; }
-    .calendar-day-profit:hover { transform: scale(1.05); z-index: 10; box-shadow: 0 0 15px rgba(16, 185, 129, 0.3); border-color: #10b981; }
-    .calendar-day-loss:hover { transform: scale(1.05); z-index: 10; box-shadow: 0 0 15px rgba(239, 68, 68, 0.3); border-color: #ef4444; }
-    .calendar-day-neutral:hover { transform: scale(1.05); z-index: 10; box-shadow: 0 0 15px rgba(100, 100, 100, 0.3); border-color: #666; }
-    
-    /* Current Day Highlight */
-    .current-day { ring-width: 2px; ring-color: #3b82f6; box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
+    .calendar-day { position: relative; transition: all 0.2s ease; cursor: pointer; border: 1px solid #2a2a2a; }
+    .calendar-day:hover { z-index: 10; transform: scale(1.05); }
+    .calendar-day-profit { background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3); }
+    .calendar-day-loss { background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); }
+    .current-day { box-shadow: 0 0 0 2px #3b82f6; z-index: 5; }
 
     /* Tooltip with Scroll */
     .calendar-tooltip {
       position: absolute; bottom: 105%; left: 50%; transform: translateX(-50%);
-      background: #151515; border: 1px solid #333; border-radius: 8px; padding: 0;
+      background: #111; border: 1px solid #333; border-radius: 8px;
       visibility: hidden; opacity: 0; transition: all 0.2s;
       min-width: 240px; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.9);
-      pointer-events: none; /* Allows hovering the day without flicker, but requires js for scrolling interaction if needed. 
-                               For strict hover scrolling, we usually need pointer-events:auto, but that conflicts with scale transforms.
-                               For this design, listing max 10 is visual. */
+      pointer-events: none; /* Allows scale transform to work on parent */
     }
     .calendar-day:hover .calendar-tooltip { visibility: visible; opacity: 1; pointer-events: auto; }
-    .tooltip-header { background: #222; padding: 8px 12px; font-weight: 600; border-bottom: 1px solid #333; border-radius: 8px 8px 0 0; }
-    .tooltip-body { padding: 8px; max-height: 250px; overflow-y: auto; }
+    .tooltip-header { background: #1a1a1a; padding: 8px 12px; font-weight: 600; border-bottom: 1px solid #333; border-radius: 8px 8px 0 0; font-size: 0.75rem; }
+    .tooltip-body { padding: 4px; max-height: 200px; overflow-y: auto; }
 
     /* UI Components */
     .metric-card { background: linear-gradient(145deg, #161616 0%, #0f0f0f 100%); border: 1px solid #2a2a2a; transition: transform 0.2s; }
     .metric-card:hover { transform: translateY(-2px); border-color: #444; }
-    
-    .chart-container-lg { height: 400px; width: 100%; position: relative; }
+    .chart-container-lg { height: 350px; width: 100%; position: relative; }
     .trade-row:hover { background: rgba(255,255,255,0.03); cursor: pointer; }
 
     /* Modal */
-    .modal-overlay { background-color: rgba(0, 0, 0, 0.92); backdrop-filter: blur(4px); }
+    .modal-overlay { background-color: rgba(0, 0, 0, 0.95); backdrop-filter: blur(4px); }
     .nav-arrow {
       position: absolute; top: 50%; transform: translateY(-50%);
       background: rgba(20,20,20,0.8); border: 1px solid #333; color: #fff;
@@ -63,17 +59,16 @@
       cursor: pointer; transition: all 0.2s; z-index: 60;
     }
     .nav-arrow:hover { background: #10b981; border-color: #10b981; }
-    .nav-arrow.left { left: 24px; }
-    .nav-arrow.right { right: 24px; }
+    .nav-arrow.left { left: 24px; } .nav-arrow.right { right: 24px; }
     
-    .process-tag { font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; display: inline-block; font-weight: 500; letter-spacing: 0.5px; }
+    .process-tag { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; display: inline-block; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
     .tag-green { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
     .tag-red { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
-    .tag-gray { background: #222; color: #888; border: 1px solid #333; }
+    .tag-gray { background: #222; color: #666; border: 1px solid #333; }
 
     @media (max-width: 1024px) {
       .calendar-grid-8 { display: flex; flex-wrap: wrap; }
-      .calendar-day, .week-summary { width: 13%; } /* Fallback for mobile */
+      .calendar-day { width: 13.5%; } .week-total { width: 100%; margin-top: 4px; }
       .nav-arrow { top: auto; bottom: 20px; width: 40px; height: 40px; }
       .nav-arrow.left { left: 30%; } .nav-arrow.right { right: 30%; }
       .hide-mobile { display: none; }
@@ -82,7 +77,7 @@
 </head>
 <body class="bg-[#0a0a0a] text-white">
 
-  <!-- ════════ MODAL (Gallery) ════════ -->
+  <!-- ════════ MODAL ════════ -->
   <div id="tradeModal" class="hidden fixed inset-0 z-[999] modal-overlay flex items-center justify-center p-2 lg:p-6">
     <button onclick="navigateTrade(-1)" class="nav-arrow left">❮</button>
     <button onclick="navigateTrade(1)" class="nav-arrow right">❯</button>
@@ -92,19 +87,17 @@
       <div class="flex justify-between items-center px-6 py-4 border-b border-[#333] bg-[#161616]">
         <div class="flex items-center gap-6">
           <div>
-            <h2 id="m_tradeId" class="text-2xl font-bold font-mono text-white tracking-tight">T-000</h2>
+            <h2 id="m_tradeId" class="text-2xl font-bold font-mono text-white tracking-tight">--</h2>
             <div class="flex items-center gap-2 text-xs text-gray-400 mt-1">
-              <span id="m_date">2025-01-01</span>
-              <span>•</span>
-              <span id="m_time">10:00:00</span>
+              <span id="m_date">--</span> • <span id="m_time">--</span>
             </div>
           </div>
           <div class="h-10 w-px bg-[#333]"></div>
           <div>
-            <span class="text-[10px] uppercase text-gray-500 font-bold tracking-wider">P&L</span>
+            <span class="text-[10px] uppercase text-gray-500 font-bold tracking-wider">Result</span>
             <div id="m_pnl" class="text-2xl font-bold leading-none mt-1">--</div>
           </div>
-          <div class="hide-mobile">
+          <div class="hide-mobile ml-4">
             <span id="m_symbol" class="px-2 py-1 rounded bg-[#222] border border-[#333] text-xs font-mono text-gray-300">--</span>
             <span id="m_side" class="px-2 py-1 rounded text-xs font-bold ml-2 uppercase">--</span>
           </div>
@@ -118,8 +111,7 @@
         <div class="w-full lg:w-3/4 bg-black flex items-center justify-center border-b lg:border-b-0 lg:border-r border-[#333] relative h-1/2 lg:h-full group">
           <img id="m_image" src="" class="max-w-full max-h-full object-contain" alt="Chart">
           <div id="m_no_image" class="hidden flex flex-col items-center text-gray-600">
-            <span class="text-5xl mb-2 opacity-30">📷</span>
-            <span>No Screenshot</span>
+            <span class="text-5xl mb-2 opacity-30">📷</span><span>No Screenshot</span>
           </div>
           <a id="m_full_link" href="#" target="_blank" class="absolute top-4 right-4 bg-black/80 hover:bg-[#222] border border-[#444] text-white px-3 py-1.5 rounded text-xs flex items-center gap-2 transition-all opacity-0 group-hover:opacity-100">
             <span>Open Original</span> ↗
@@ -127,28 +119,28 @@
         </div>
 
         <!-- Data Area -->
-        <div class="w-full lg:w-1/4 bg-[#111] overflow-y-auto h-1/2 lg:h-full flex flex-col">
+        <div class="w-full lg:w-1/4 bg-[#111] overflow-y-auto h-1/2 lg:h-full flex flex-col divide-y divide-[#2a2a2a]">
           <!-- Prices -->
-          <div class="grid grid-cols-2 border-b border-[#2a2a2a]">
+          <div class="grid grid-cols-2">
             <div class="p-4 border-r border-[#2a2a2a]">
-              <span class="text-[10px] uppercase text-gray-500 font-bold">Entry Price</span>
+              <span class="text-[10px] uppercase text-gray-500 font-bold">Entry</span>
               <div id="m_entry_price" class="text-sm font-mono text-white mt-1">--</div>
             </div>
             <div class="p-4">
-              <span class="text-[10px] uppercase text-gray-500 font-bold">Exit Price</span>
+              <span class="text-[10px] uppercase text-gray-500 font-bold">Exit</span>
               <div id="m_exit_price" class="text-sm font-mono text-white mt-1">--</div>
             </div>
           </div>
           
           <!-- Details -->
-          <div class="p-5 border-b border-[#2a2a2a] space-y-3">
+          <div class="p-5 space-y-3">
             <div class="flex justify-between"><span class="text-sm text-gray-400">Setup</span><span id="m_setup" class="text-sm text-white">--</span></div>
             <div class="flex justify-between"><span class="text-sm text-gray-400">Session</span><span id="m_session" class="text-sm text-white">--</span></div>
             <div class="flex justify-between"><span class="text-sm text-gray-400">Score</span><span id="m_score" class="text-sm font-bold text-yellow-400">--</span></div>
           </div>
 
           <!-- Execution Tags -->
-          <div class="p-5 border-b border-[#2a2a2a] space-y-3">
+          <div class="p-5 space-y-3">
             <h3 class="text-[10px] uppercase text-gray-500 font-bold tracking-wider mb-2">Process Checklist</h3>
             <div class="flex justify-between items-center"><span class="text-sm text-gray-400">Pre-Trade</span><span id="m_tag_pre" class="process-tag">--</span></div>
             <div class="flex justify-between items-center"><span class="text-sm text-gray-400">Entry</span><span id="m_tag_entry" class="process-tag">--</span></div>
@@ -173,17 +165,18 @@
     <div class="text-center"><div class="loading-spinner mx-auto mb-4"></div><p class="text-gray-400">Loading Dashboard...</p></div>
   </div>
   <div id="errorState" class="hidden fixed inset-0 bg-[#0a0a0a] flex items-center justify-center z-50">
-    <div class="text-center p-8 bg-[#1a1a1a] rounded border border-red-900">
+    <div class="text-center p-8 bg-[#1a1a1a] rounded border border-red-900 max-w-lg">
       <h2 class="text-xl font-bold text-red-400 mb-2">Failed to Load</h2>
-      <button onclick="location.reload()" class="px-4 py-2 bg-red-900 rounded hover:bg-red-800">Retry</button>
+      <p id="errorDetail" class="text-gray-400 mb-4 font-mono text-sm"></p>
+      <button onclick="location.reload()" class="px-4 py-2 bg-red-900 rounded hover:bg-red-800 text-white">Retry</button>
     </div>
   </div>
 
-  <!-- ════════ MAIN CONTENT ════════ -->
+  <!-- ════════ MAIN DASHBOARD ════════ -->
   <div id="mainDashboard" class="hidden min-h-screen p-4 md:p-6 max-w-[1600px] mx-auto">
     
-    <!-- HEADER -->
-    <div class="flex flex-col md:flex-row justify-between items-end mb-8 gap-4">
+    <!-- Header -->
+    <div class="flex justify-between items-end mb-8">
       <div>
         <h1 class="text-3xl font-bold flex items-center">
           Trading Dashboard <span class="w-2.5 h-2.5 bg-green-500 rounded-full ml-3 animate-pulse"></span>
@@ -192,10 +185,10 @@
       </div>
     </div>
 
-    <!-- METRICS -->
+    <!-- Top Metrics -->
     <div id="metricsContainer" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8"></div>
 
-    <!-- EQUITY CURVE (Resized & Color Logic) -->
+    <!-- Equity Curve -->
     <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a] mb-8">
       <div class="flex justify-between items-center mb-4">
         <h2 class="text-lg font-semibold">Equity Curve</h2>
@@ -209,10 +202,10 @@
       </div>
     </div>
 
-    <!-- CALENDAR & EVALUATION -->
+    <!-- Calendar & Evaluation -->
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
       
-      <!-- CALENDAR (8 Cols) -->
+      <!-- Calendar (8 Cols) -->
       <div class="xl:col-span-2 bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a]">
         <div class="flex justify-between items-center mb-6">
           <button onclick="changeCalendarMonth(-1)" class="p-2 hover:bg-[#2a2a2a] rounded">❮</button>
@@ -220,23 +213,20 @@
           <button onclick="changeCalendarMonth(1)" class="p-2 hover:bg-[#2a2a2a] rounded">❯</button>
         </div>
         
-        <!-- Headers (8 Cols) -->
         <div class="calendar-grid-8 mb-2 text-center text-xs text-gray-500 font-bold uppercase tracking-wider">
           <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div><div class="text-gray-300">Total</div>
         </div>
-        
-        <!-- Grid -->
         <div id="calendarGrid" class="calendar-grid-8"></div>
       </div>
 
-      <!-- EVALUATION PANEL (Full Detail) -->
+      <!-- Full Evaluation Panel -->
       <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a]">
         <h2 class="text-lg font-semibold mb-6">Evaluation</h2>
-        <div id="evaluationPanel" class="space-y-0 divide-y divide-[#2a2a2a]"></div>
+        <div id="evaluationPanel" class="divide-y divide-[#2a2a2a]"></div>
       </div>
     </div>
 
-    <!-- CHARTS -->
+    <!-- Charts -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
       <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a]">
         <h2 class="text-lg font-semibold mb-4">Performance by Symbol</h2>
@@ -252,10 +242,10 @@
       </div>
     </div>
 
-    <!-- INSIGHTS -->
+    <!-- Insights -->
     <div id="insightsContainer" class="mb-8"></div>
 
-    <!-- TABLE -->
+    <!-- Trade Table -->
     <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a]">
       <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
         <h2 class="text-lg font-semibold">Trade History</h2>
@@ -289,8 +279,9 @@
 
 <script>
 // ════ CONFIG ════
-const DATA_URL = './data.json?v=' + new Date().getTime();
-const STARTING_BALANCE = 50000; // Default if not found
+// NOTE: Remove ?v= if testing locally (file://), keep it for web
+const DATA_URL = './data.json'; 
+const STARTING_BALANCE = 50000;
 
 // ════ STATE ════
 let rawData = {}, allTrades = [], filteredTrades = [];
@@ -306,35 +297,45 @@ const getNetPnL = (t) => parseMoneyValue(t.p_l) - parseMoneyValue(t.fees||0);
 // Helper for Hold Time (in Minutes)
 const getHoldTime = (t) => {
   if(!t.entry_time || !t.exit_time) return 0;
+  // Use generic date to compare times
   const d1 = new Date(`2000-01-01T${t.entry_time}`);
   const d2 = new Date(`2000-01-01T${t.exit_time}`);
   const diffMs = d2 - d1;
   return diffMs > 0 ? Math.floor(diffMs / 60000) : 0;
 };
 
-// Drive Link Fixer
+// Drive Link Fixer (High Res for Modal)
 const driveUrls = (url) => {
   if(!url) return {thumb:null,full:null};
   let id = null;
   const m1 = url.match(/\/file\/d\/([\w-]+)/);
   const m2 = url.match(/id=([\w-]+)/);
   if(m1) id=m1[1]; else if(m2) id=m2[1];
-  if(id) return { thumb: `https://drive.google.com/thumbnail?id=${id}&sz=w400`, full: `https://drive.google.com/thumbnail?id=${id}&sz=w1920` };
+  
+  if(id) return { 
+    thumb: `https://drive.google.com/thumbnail?id=${id}&sz=w400`, 
+    full: `https://drive.google.com/thumbnail?id=${id}&sz=w1920` 
+  };
   return { thumb:url, full:url };
 };
 
 // ════ INIT ════
 document.addEventListener('DOMContentLoaded', async () => {
   try {
-    const res = await fetch(DATA_URL);
-    if(!res.ok) throw new Error();
-    const data = await res.json();
+    // Add timestamp for cache busting ONLY if http/https
+    const url = window.location.protocol.startsWith('http') ? `${DATA_URL}?v=${new Date().getTime()}` : DATA_URL;
     
-    rawData = { ...data, trades: (data.trades||[]).slice().reverse() }; // Newest first for display
+    const res = await fetch(url);
+    if(!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+    
+    const data = await res.json();
+    if(!data.trades) throw new Error("JSON missing 'trades' array");
+
+    rawData = { ...data, trades: (data.trades||[]).slice().reverse() }; 
     allTrades = rawData.trades;
     filteredTrades = [...allTrades];
 
-    // Prepare Equity Data
+    // Calc Equity
     const sorted = [...allTrades].sort((a,b) => new Date(a.date+' '+a.entry_time) - new Date(b.date+' '+b.entry_time));
     const sb = sorted[0]?.Balance ? parseMoneyValue(sorted[0].Balance)-getNetPnL(sorted[0]) : STARTING_BALANCE;
     
@@ -358,6 +359,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch(e) {
     document.getElementById('loadingState').classList.add('hidden');
     document.getElementById('errorState').classList.remove('hidden');
+    document.getElementById('errorDetail').textContent = e.message;
+    console.error(e);
   }
 });
 
@@ -403,19 +406,19 @@ function buildEvaluationPanel() {
   const wins = t.filter(x=>parseMoneyValue(x.p_l)>0);
   const losses = t.filter(x=>parseMoneyValue(x.p_l)<0);
   
-  // Avg Hold Time
+  // Metrics
   const totalMins = t.reduce((s,x)=>s+getHoldTime(x),0);
   const avgHold = t.length ? (totalMins/t.length).toFixed(0) : 0;
-
-  // Winrate w/o BE
   const activeTrades = wins.length + losses.length;
   const realWr = activeTrades ? ((wins.length/activeTrades)*100).toFixed(2) : '0.00';
-
-  // ROI
   const net = t.reduce((s,x)=>s+getNetPnL(x),0);
   const roi = ((net / rawData.startingBalance)*100).toFixed(2);
+  const uniqueDays = new Set(t.map(x=>x.date)).size;
+  const tpd = uniqueDays ? (t.length/uniqueDays).toFixed(1) : 0;
+  const tpw = uniqueDays ? (t.length/(uniqueDays/5)).toFixed(1) : 0; 
 
-  // Streak (L W W L)
+  // Streak L W W L (Last 10)
+  // Reverse loop from most recent trade (index 0) backwards
   let streakStr = [];
   for(let i=0; i<Math.min(t.length, 10); i++) {
     const p = parseMoneyValue(t[i].p_l);
@@ -423,11 +426,8 @@ function buildEvaluationPanel() {
     else if(p<0) streakStr.push('<span class="text-red-400 font-bold">L</span>');
     else streakStr.push('<span class="text-gray-500">B</span>');
   }
-  
-  // Trades Per Day/Week
-  const uniqueDays = new Set(t.map(x=>x.date)).size;
-  const tpd = uniqueDays ? (t.length/uniqueDays).toFixed(1) : 0;
-  const tpw = uniqueDays ? (t.length/(uniqueDays/5)).toFixed(1) : 0; // Approx
+  // Reverse again to show oldest -> newest (Left to Right)
+  const streakDisplay = streakStr.reverse().join(' ');
 
   const rows = [
     {l:'Total Trades', v:t.length},
@@ -439,9 +439,9 @@ function buildEvaluationPanel() {
     {l:'Winrate (w/o BE)', v:`${realWr}%`},
     {l:'ROI', v:`${roi}%`, c:roi>=0?'text-green-400':'text-red-400'},
     {l:'Max Drawdown', v:`${parseFloat(meta.maxDrawdownPercent).toFixed(2)}%`, c:'text-red-400'},
-    {l:'Winning / Losing Days', v:`${wins.length} / ${losses.length}`}, // Simple proxy if daily PnL not computed
+    {l:'Winning / Losing Days', v:`${wins.length} / ${losses.length}`},
     {l:'Trades Per Day / Week', v:`${tpd} / ${tpw}`},
-    {l:'Streak (Recent)', v:streakStr.reverse().join(' ')}
+    {l:'Current Streak', v:streakDisplay}
   ];
 
   document.getElementById('evaluationPanel').innerHTML = rows.map(r => `
@@ -452,7 +452,7 @@ function buildEvaluationPanel() {
   `).join('');
 }
 
-// ════ CALENDAR (8 COLUMNS) ════
+// ════ CALENDAR (8 COLS) ════
 let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
 
 function renderCalendar() {
@@ -461,9 +461,7 @@ function renderCalendar() {
   
   const firstDay = new Date(calYear, calMonth, 1).getDay(); // 0=Sun, 1=Mon
   const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
-  // Adjust offset: Mon(1)=0, Tue(2)=1 ... Sun(0)=6
   const offset = firstDay === 0 ? 6 : firstDay - 1;
-  
   const today = new Date();
   const isCurrentMonth = today.getFullYear()===calYear && today.getMonth()===calMonth;
   const currentDay = today.getDate();
@@ -471,11 +469,10 @@ function renderCalendar() {
   let html = '';
   let weekTrades = 0, weekPnL = 0;
   
-  // Fill Empty Days at Start
+  // Fill Empty Days
   for(let i=0; i<offset; i++) html += `<div class="h-20 bg-[#111] border border-[#222] rounded-lg"></div>`;
   
   for(let d=1; d<=daysInMonth; d++) {
-    // 1. Get Data for Day
     const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const dayTrades = rawData.trades.filter(t => t.date === dateStr);
     const dayPnL = dayTrades.reduce((s,t)=>s+parseMoneyValue(t.p_l),0);
@@ -483,61 +480,50 @@ function renderCalendar() {
     weekTrades += dayTrades.length;
     weekPnL += dayPnL;
 
-    // 2. Determine Style
     let bg = 'bg-[#151515]', border='border-[#2a2a2a]', txt='text-gray-500';
     if(dayTrades.length) {
       bg = dayPnL>=0 ? 'bg-green-900/10' : 'bg-red-900/10';
       border = dayPnL>=0 ? 'border-green-900/40' : 'border-red-900/40';
       txt = dayPnL>=0 ? 'text-green-400' : 'text-red-400';
     }
-    const isToday = isCurrentMonth && d === currentDay ? 'current-day ring-2 ring-blue-500' : '';
+    const isToday = isCurrentMonth && d === currentDay ? 'current-day' : '';
 
-    // 3. Build Tooltip (Limit 10 + Scroll)
+    // Tooltip (Limit 10 + Scroll)
     let tooltip = '';
     if(dayTrades.length) {
       tooltip = `<div class="calendar-tooltip">
-        <div class="tooltip-header">${dateStr} <span class="float-right">${formatMoney(dayPnL)}</span></div>
+        <div class="tooltip-header flex justify-between"><span>${dateStr}</span><span>${formatMoney(dayPnL)}</span></div>
         <div class="tooltip-body space-y-1">`;
       dayTrades.forEach(t => {
         const tp = parseMoneyValue(t.p_l);
         tooltip += `<div onclick="event.stopPropagation(); openTradeModal('${t.trade_id}')" class="flex justify-between hover:bg-[#333] p-1.5 rounded cursor-pointer text-xs">
-          <span class="font-bold text-gray-300">${t.symbol}</span>
-          <span class="${tp>=0?'text-green-400':'text-red-400'}">${formatMoney(tp)}</span>
+          <span class="font-bold text-gray-300">${t.symbol}</span><span class="${tp>=0?'text-green-400':'text-red-400'}">${formatMoney(tp)}</span>
         </div>`;
       });
       tooltip += `</div></div>`;
     }
 
-    // 4. Render Day Cell
-    html += `<div class="calendar-day h-20 rounded-lg border ${border} ${bg} ${isToday} flex flex-col items-center justify-center relative group">
+    html += `<div class="calendar-day h-20 rounded-lg ${border} ${bg} ${isToday} flex flex-col items-center justify-center relative group">
       <span class="text-xs font-bold text-gray-500 absolute top-1 right-2">${d}</span>
-      ${dayTrades.length ? `
-        <span class="text-sm font-bold ${txt}">${formatMoney(dayPnL)}</span>
-        <span class="text-[10px] text-gray-500">${dayTrades.length} trades</span>
-      ` : ''}
+      ${dayTrades.length ? `<span class="text-sm font-bold ${txt}">${formatMoney(dayPnL)}</span><span class="text-[10px] text-gray-500">${dayTrades.length}t</span>` : ''}
       ${tooltip}
     </div>`;
 
-    // 5. Check if Sunday (End of Week) OR End of Month
+    // Week Total Logic
     const dayOfWeek = new Date(calYear, calMonth, d).getDay(); // 0 = Sunday
-    
     if(dayOfWeek === 0 || d === daysInMonth) {
-      // If end of month is NOT Sunday, fill gaps first
+      // If month ends mid-week, fill grid until Sunday
       if(d === daysInMonth && dayOfWeek !== 0) {
-        const remaining = 7 - (dayOfWeek === 0 ? 7 : dayOfWeek); // Simple gap filler logic
-        // This is tricky with grid flow. simpler: Just let the grid handle it? 
-        // No, we need the "Total" to align in the 8th column.
-        // We just render the Total cell next.
+        const remaining = 7 - (dayOfWeek === 0 ? 7 : dayOfWeek); // Unused for grid alignment, logic handled by CSS grid flow
+        // For grid 8 cols, we just insert total next
       }
       
-      // Render Weekly Total
       const wTxt = weekPnL>=0 ? 'text-green-400' : 'text-red-400';
-      html += `<div class="h-20 bg-[#1a1a1a] border border-[#333] rounded-lg flex flex-col items-center justify-center relative">
+      html += `<div class="h-20 bg-[#1a1a1a] border border-[#333] rounded-lg flex flex-col items-center justify-center relative week-total">
         <span class="text-[9px] uppercase text-gray-600 font-bold mb-1">Week</span>
         <span class="text-sm font-bold ${wTxt}">${formatMoney(weekPnL)}</span>
         <span class="text-[10px] text-gray-500">${weekTrades}t</span>
       </div>`;
-      
       weekTrades = 0; weekPnL = 0;
     }
   }
@@ -553,22 +539,17 @@ window.changeCalendarMonth = (d) => {
 function initCharts() {
   Chart.defaults.color='#666'; Chart.defaults.borderColor='#2a2a2a';
   
-  // EQUITY CURVE WITH SEGMENT COLOR FLIP
+  // EQUITY CURVE: COLOR FLIP LOGIC
   const ctx = document.getElementById('equityChart').getContext('2d');
   equityChart = new Chart(ctx, {
     type: 'line',
     data: { 
       labels:[], 
       datasets:[{
-        label:'Equity', 
-        data:[],
+        label:'Equity', data:[],
         fill: { target: {value: rawData.startingBalance}, above: 'rgba(16, 185, 129, 0.1)', below: 'rgba(239, 68, 68, 0.1)' },
-        segment: {
-          borderColor: ctx => ctx.p0.parsed.y >= rawData.startingBalance ? '#10b981' : '#ef4444'
-        },
-        tension: 0.3,
-        pointRadius: 0,
-        pointHoverRadius: 6
+        segment: { borderColor: ctx => ctx.p0.parsed.y >= rawData.startingBalance ? '#10b981' : '#ef4444' },
+        tension: 0.3, pointRadius: 0, pointHoverRadius: 6
       }] 
     },
     options: {
@@ -580,7 +561,7 @@ function initCharts() {
   });
   switchEquityView('trades');
 
-  // Other charts (simplified init)
+  // Other Charts
   new Chart(document.getElementById('timeAnalysisChart'), {
     type: 'bar',
     data: { labels: Object.keys(rawData.hours).map(k=>k+':00'), datasets:[{data: Object.values(rawData.hours).map(v=>v.pnl), backgroundColor: Object.values(rawData.hours).map(v=>v.pnl>=0?'#10b981':'#ef4444')}] },
@@ -588,7 +569,7 @@ function initCharts() {
   });
   
   const sData = Object.entries(rawData.symbols).sort((a,b)=>b[1].pnl-a[1].pnl).slice(0,5);
-  buildSymbolPerformance(); // List
+  buildSymbolPerformance(); 
   new Chart(document.getElementById('symbolChart'), {
     type: 'bar',
     data: { labels: sData.map(x=>x[0]), datasets:[{data: sData.map(x=>x[1].pnl), backgroundColor: sData.map(x=>x[1].pnl>=0?'#10b981':'#ef4444')}] },
@@ -603,7 +584,7 @@ function initCharts() {
   });
 }
 
-// ════ MODAL NAVIGATION & TABLE ════
+// ════ MODAL & TABLE ════
 function displayTrades(page=1) {
   const start = (page-1)*tradesPerPage;
   const end = Math.min(start+tradesPerPage, filteredTrades.length);
@@ -626,9 +607,7 @@ function displayTrades(page=1) {
   document.getElementById('paginationInfo').textContent = `${start+1}-${end} of ${filteredTrades.length}`;
 }
 
-// ... (Keep existing Modal/Navigation/Filter logic from previous version unchanged) ...
-// Re-pasting the exact modal/nav logic here to ensure it's complete in one block.
-
+// Modal Logic
 function openTradeModal(id) {
   const idx = allTrades.findIndex(t => t.trade_id === id);
   if(idx === -1) return;
@@ -656,13 +635,13 @@ function renderModalContent() {
   
   const pnl = parseMoneyValue(t.p_l);
   document.getElementById('m_pnl').textContent = formatMoney(pnl);
-  document.getElementById('m_pnl').className = `text-lg font-bold leading-none mt-1 ${pnl>=0?'text-green-400':'text-red-400'}`;
+  document.getElementById('m_pnl').className = `text-2xl font-bold leading-none mt-1 ${pnl>=0?'text-green-400':'text-red-400'}`;
   
   document.getElementById('m_entry_price').textContent = parseFloat(t.entry_price).toFixed(2);
   document.getElementById('m_exit_price').textContent = parseFloat(t.exit_price).toFixed(2);
   document.getElementById('m_setup').textContent = t.setup || '-';
   document.getElementById('m_session').textContent = t.session || '-';
-  document.getElementById('m_score').textContent = t.score || '-';
+  document.getElementById('m_score').textContent = t.score || t['Total Score'] || '-';
   document.getElementById('m_notes').textContent = t.notes || 'No notes.';
 
   const {full} = driveUrls(t.screenshot||t.screenshot_url_A);
@@ -678,7 +657,15 @@ function renderModalContent() {
   setTag('m_tag_mgmt', t.trade_management); setTag('m_tag_exit', t.trade_exit);
 }
 
-// Interaction
+// Misc Logic
+function buildSymbolPerformance() {
+  const s = Object.entries(rawData.symbols).sort((a,b)=>b[1].pnl-a[1].pnl).slice(0,5);
+  document.getElementById('symbolPerformance').innerHTML = s.map(([k,v])=>`<div class="flex justify-between p-3 bg-[#0a0a0a] rounded"><span class="font-medium">${k}</span><div class="text-right"><span class="${v.pnl>=0?'text-green-400':'text-red-400'}">${formatMoney(v.pnl)}</span><span class="text-xs text-gray-500 ml-2">${((v.wins/v.trades)*100).toFixed(0)}% WR</span></div></div>`).join('');
+}
+function buildInsights() {
+  const i = rawData.insights || [];
+  if(i.length) document.getElementById('insightsContainer').innerHTML = `<div class="bg-[#1a1a1a] p-4 rounded border border-[#2a2a2a]"><h3 class="font-bold mb-2">Insights</h3><div class="grid gap-2">${i.map(x=>`<div class="bg-[#111] p-2 text-sm text-gray-300 rounded">${x}</div>`).join('')}</div></div>`;
+}
 window.filterTrades = () => {
   const q = document.getElementById('tradeSearch').value.toLowerCase();
   const type = document.getElementById('tradeFilter').value;
@@ -688,6 +675,14 @@ window.filterTrades = () => {
 window.changePage = (d) => {
   const max = Math.ceil(filteredTrades.length/tradesPerPage);
   if(currentPage+d>=1 && currentPage+d<=max) displayTrades(currentPage+d);
+}
+window.switchEquityView = (mode) => {
+  const d = mode==='days' ? rawData.equityDays : rawData.equityTrades;
+  equityChart.data.labels = d.map(x => mode==='days' ? x.date : 'T'+x.trade);
+  equityChart.data.datasets[0].data = d.map(x => x.equity);
+  equityChart.update();
+  document.getElementById('equityByTrades').className = mode==='trades'?'px-3 py-1 text-sm rounded bg-[#2a2a2a]':'px-3 py-1 text-sm rounded bg-[#1a1a1a] text-gray-400';
+  document.getElementById('equityByDays').className = mode==='days'?'px-3 py-1 text-sm rounded bg-[#2a2a2a]':'px-3 py-1 text-sm rounded bg-[#1a1a1a] text-gray-400';
 }
 document.addEventListener('keydown', e => {
   if(modalOpen) { if(e.key==='ArrowLeft')navigateTrade(-1); if(e.key==='ArrowRight')navigateTrade(1); if(e.key==='Escape')closeModal(); }
