@@ -67,12 +67,22 @@
     .tag-red { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
     .tag-gray { background: #222; color: #666; border: 1px solid #333; }
 
+    /* Pagination buttons from snippet */
+    .pagination-btn {
+      background: #2a2a2a; border: 1px solid #3a3a3a; color: #ffffff;
+      padding: 8px 16px; border-radius: 4px; cursor: pointer; transition: all 0.2s ease;
+    }
+    .pagination-btn:hover:not(:disabled) { background: #3a3a3a; transform: translateY(-1px); }
+    .pagination-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
     @media (max-width: 1024px) {
       .calendar-grid-8 { display: flex; flex-wrap: wrap; }
       .calendar-day { width: 13.5%; } .week-total { width: 100%; margin-top: 4px; }
       .nav-arrow { top: auto; bottom: 20px; width: 40px; height: 40px; }
       .nav-arrow.left { left: 30%; } .nav-arrow.right { right: 30%; }
       .hide-mobile { display: none; }
+      .table-container { overflow-x: auto; }
+      table { min-width: 600px; }
     }
   </style>
 </head>
@@ -243,38 +253,51 @@
       </div>
     </div>
 
-    <!-- Insights -->
+    <!-- Insights (Original Position) -->
     <div id="insightsContainer" class="mb-8"></div>
 
-    <!-- Trade Table -->
+    <!-- Trades Table (Reinstated Layout) -->
     <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a]">
-      <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+      <div class="flex flex-col gap-4 mb-4">
         <h2 class="text-lg font-semibold">Trade History</h2>
-        <div class="flex gap-3">
-          <input type="text" id="tradeSearch" placeholder="Search..." class="bg-[#0a0a0a] border border-[#333] rounded px-3 py-1.5 text-sm w-48" onkeyup="filterTrades()">
-          <select id="tradeFilter" class="bg-[#0a0a0a] border border-[#333] rounded px-3 py-1.5 text-sm" onchange="filterTrades()">
-            <option value="">All Trades</option><option value="win">Winners</option><option value="loss">Losers</option>
-          </select>
-          <div class="flex gap-1">
-            <button class="pagination-btn" id="prevPage" onclick="changePage(-1)">❮</button>
-            <button class="pagination-btn" id="nextPage" onclick="changePage(1)">❯</button>
+        
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <span id="paginationInfo" class="text-sm text-gray-400 order-2 sm:order-1"></span>
+          
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto order-1 sm:order-2">
+            <input type="text" id="tradeSearch" placeholder="Search trades..." class="px-3 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded text-sm focus:outline-none focus:border-green-400 w-full sm:w-auto" onkeyup="filterTrades()">
+            <select id="tradeFilter" class="px-3 py-2 bg-[#0a0a0a] border border-[#2a2a2a] rounded text-sm focus:outline-none focus:border-green-400 w-full sm:w-auto" onchange="filterTrades()">
+              <option value="">All Trades</option>
+              <option value="win">Winners</option>
+              <option value="loss">Losers</option>
+            </select>
+          </div>
+          
+          <div class="flex gap-2 order-3 w-full sm:w-auto">
+            <button id="prevPage" class="pagination-btn flex-1 sm:flex-initial" onclick="changePage(-1)">← Previous</button>
+            <button id="nextPage" class="pagination-btn flex-1 sm:flex-initial" onclick="changePage(1)">Next →</button>
           </div>
         </div>
       </div>
       
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm text-left">
-          <thead class="text-xs text-gray-500 uppercase bg-[#111] border-b border-[#2a2a2a]">
+      <div class="table-container">
+        <table class="w-full text-sm">
+          <thead class="border-b border-[#2a2a2a]">
             <tr>
-              <th class="py-3 px-4">ID</th><th class="py-3 px-4">Date</th><th class="py-3 px-4">Symbol</th>
-              <th class="py-3 px-4 hide-mobile">Side</th><th class="py-3 px-4 hide-mobile">Entry</th>
-              <th class="py-3 px-4 hide-mobile">Exit</th><th class="py-3 px-4 text-right">P&L</th><th class="py-3 px-4 text-center">View</th>
+              <th class="py-3 px-4 text-left">Trade ID</th>
+              <th class="py-3 px-4 text-left">Date</th>
+              <th class="py-3 px-4 text-left">Symbol</th>
+              <th class="py-3 px-4 text-left hide-mobile">Side</th>
+              <th class="py-3 px-4 text-left hide-mobile">Entry</th>
+              <th class="py-3 px-4 text-left hide-mobile">Exit</th>
+              <th class="py-3 px-4 text-right">P&L</th>
+              <th class="py-3 px-4 text-right hide-mobile">Balance</th>
+              <th class="py-3 px-4 text-center">Chart</th>
             </tr>
           </thead>
-          <tbody id="tradesTableBody" class="divide-y divide-[#2a2a2a]"></tbody>
+          <tbody id="tradesTableBody"></tbody>
         </table>
       </div>
-      <div class="text-xs text-gray-500 mt-4 text-right" id="paginationInfo"></div>
     </div>
   </div>
 
@@ -334,7 +357,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     let b = sb;
     const eqT = [{trade:0, equity:sb, date:'Start'}];
-    sorted.forEach((t,i) => { b+=getNetPnL(t); eqT.push({trade:i+1, equity:b, date:t.date}); });
+    
+    // Add running balance to trade objects for display in table
+    sorted.forEach((t,i) => { 
+      b+=getNetPnL(t); 
+      t.runningBalance = b; // Store for table
+      eqT.push({trade:i+1, equity:b, date:t.date}); 
+    });
+    
     rawData.equityTrades = eqT;
     
     const dMap = new Map(); sorted.forEach(t=>dMap.set(t.date,(dMap.get(t.date)||0)+getNetPnL(t)));
@@ -378,7 +408,7 @@ function buildSymbolPerformance() {
 
 function buildInsights() {
   const i = rawData.insights || [];
-  if(i.length) document.getElementById('insightsContainer').innerHTML = `<div class="bg-[#1a1a1a] p-4 rounded border border-[#2a2a2a]"><h3 class="font-bold mb-2">Insights</h3><div class="grid gap-2">${i.map(x=>`<div class="bg-[#111] p-2 text-sm text-gray-300 rounded">${x}</div>`).join('')}</div></div>`;
+  if(i.length) document.getElementById('insightsContainer').innerHTML = `<div class="bg-[#1a1a1a] p-4 rounded-lg border border-[#2a2a2a]"><h3 class="font-bold mb-2">💡 Key Insights</h3><div class="grid gap-2 grid-cols-1 md:grid-cols-2">${i.map(x=>`<div class="bg-[#0a0a0a] p-3 text-sm text-gray-300 rounded border border-[#333]">${x}</div>`).join('')}</div></div>`;
 }
 
 function buildMetrics() {
@@ -426,14 +456,16 @@ function buildEvaluationPanel() {
   const tpd = uniqueDays ? (t.length/uniqueDays).toFixed(1) : 0;
   const tpw = uniqueDays ? (t.length/(uniqueDays/5)).toFixed(1) : 0; 
 
-  let streakStr = [];
-  for(let i=0; i<Math.min(t.length, 10); i++) {
-    const p = parseMoneyValue(t[i].p_l);
-    if(p>0) streakStr.push('<span class="text-green-400 font-bold">W</span>');
-    else if(p<0) streakStr.push('<span class="text-red-400 font-bold">L</span>');
-    else streakStr.push('<span class="text-gray-500">B</span>');
+  // Streak Logic: Last 5 trades (L W L W W)
+  let streakHtml = [];
+  const recent = t.slice(0, 5); // Already reversed (newest first)
+  // We want to display oldest -> newest (Left -> Right) for the last 5
+  for(let i = recent.length - 1; i >= 0; i--) {
+    const p = parseMoneyValue(recent[i].p_l);
+    if(p > 0) streakHtml.push('<span class="text-green-400 font-bold mx-1">W</span>');
+    else if(p < 0) streakHtml.push('<span class="text-red-400 font-bold mx-1">L</span>');
+    else streakHtml.push('<span class="text-gray-500 mx-1">B</span>');
   }
-  const streakDisplay = streakStr.reverse().join(' ');
 
   const rows = [
     {l:'Total Trades', v:t.length},
@@ -447,7 +479,7 @@ function buildEvaluationPanel() {
     {l:'Max Drawdown', v:`${parseFloat(meta.maxDrawdownPercent).toFixed(2)}%`, c:'text-red-400'},
     {l:'Winning / Losing Days', v:`${wins.length} / ${losses.length}`},
     {l:'Trades Per Day / Week', v:`${tpd} / ${tpw}`},
-    {l:'Current Streak', v:streakDisplay}
+    {l:'Current Streak', v:streakHtml.join('')}
   ];
 
   document.getElementById('evaluationPanel').innerHTML = rows.map(r => `
@@ -512,18 +544,14 @@ function renderCalendar() {
       ${tooltip}
     </div>`;
 
-    // Week Total Logic
-    const dayOfWeek = new Date(calYear, calMonth, d).getDay(); // 0 = Sunday
+    const dayOfWeek = new Date(calYear, calMonth, d).getDay(); 
     if(dayOfWeek === 0 || d === daysInMonth) {
-      // If month ends mid-week, fill grid until Sunday
       if(d === daysInMonth && dayOfWeek !== 0) {
-        const remaining = 7 - (dayOfWeek === 0 ? 7 : dayOfWeek); 
-        // Just fill visual gap if needed for layout, but grid handles flow
+        // Grid auto-fills, no action needed
       }
       
       let wHtml = `<div class="h-20 bg-transparent border border-transparent rounded-lg"></div>`;
       
-      // ONLY SHOW TOTAL IF TRADES EXIST
       if(weekTrades > 0) {
         const isProfit = weekPnL >= 0;
         const wBg = isProfit ? 'bg-green-900/10' : 'bg-red-900/10';
@@ -595,6 +623,7 @@ function initCharts() {
   });
 }
 
+// ════ TABLE (Reinstated) ════
 function displayTrades(page=1) {
   const start = (page-1)*tradesPerPage;
   const end = Math.min(start+tradesPerPage, filteredTrades.length);
@@ -603,20 +632,28 @@ function displayTrades(page=1) {
   document.getElementById('tradesTableBody').innerHTML = show.map(t => {
     const {full} = driveUrls(t.screenshot||t.screenshot_url_A);
     const pnl = parseMoneyValue(t.p_l);
-    return `<tr class="trade-row border-b border-[#222]" onclick="openTradeModal('${t.trade_id}')">
-      <td class="py-3 px-4 font-mono text-blue-400 text-xs">${t.trade_id}</td>
-      <td class="py-3 px-4 text-gray-400 text-xs">${t.date}</td>
-      <td class="py-3 px-4 font-bold text-xs">${t.symbol}</td>
-      <td class="py-3 px-4 hide-mobile"><span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${t.side?.toLowerCase().includes('long')?'bg-green-900 text-green-200':'bg-red-900 text-red-200'}">${t.side}</span></td>
-      <td class="py-3 px-4 hide-mobile font-mono text-xs text-gray-500">${parseFloat(t.entry_price).toFixed(2)}</td>
-      <td class="py-3 px-4 hide-mobile font-mono text-xs text-gray-500">${parseFloat(t.exit_price).toFixed(2)}</td>
-      <td class="py-3 px-4 text-right font-bold text-xs ${pnl>=0?'text-green-400':'text-red-400'}">${formatMoney(pnl)}</td>
-      <td class="py-3 px-4 text-center">${full?'<span class="text-[10px] bg-[#333] px-2 py-1 rounded">IMG</span>':'-'}</td>
+    // Calculated Running Balance fallback
+    const balance = t.Balance ? parseFloat(t.Balance) : (t.runningBalance || 0);
+
+    return `<tr class="trade-row border-b border-[#2a2a2a] transition-colors" onclick="openTradeModal('${t.trade_id}')">
+      <td class="py-3 px-4 text-left font-mono text-sm text-blue-400 hover:underline">${t.trade_id}</td>
+      <td class="py-3 px-4 text-left text-sm text-gray-300">${t.date}</td>
+      <td class="py-3 px-4 text-left text-sm font-medium">${t.symbol}</td>
+      <td class="py-3 px-4 text-left hide-mobile"><span class="px-2 py-1 text-xs rounded ${t.side?.toLowerCase().includes('long')?'bg-green-900 text-green-200':'bg-red-900 text-red-200'}">${t.side}</span></td>
+      <td class="py-3 px-4 text-left hide-mobile text-sm text-gray-300 font-mono">${parseFloat(t.entry_price).toFixed(2)}</td>
+      <td class="py-3 px-4 text-left hide-mobile text-sm text-gray-300 font-mono">${parseFloat(t.exit_price).toFixed(2)}</td>
+      <td class="py-3 px-4 text-right text-sm font-bold ${pnl>=0?'text-green-400':'text-red-400'}">${formatMoney(pnl)}</td>
+      <td class="py-3 px-4 text-right hide-mobile text-sm text-gray-300">$${balance.toFixed(2)}</td>
+      <td class="py-3 px-4 text-center">
+        ${full ? `<div class="screenshot-link" onclick="event.stopPropagation(); window.open('${full}','_blank')"><span class="text-xs bg-[#333] px-2 py-1 rounded hover:bg-white hover:text-black transition-colors cursor-pointer">IMG</span></div>` : '<span class="text-gray-500">-</span>'}
+      </td>
     </tr>`;
   }).join('');
-  document.getElementById('paginationInfo').textContent = `${start+1}-${end} of ${filteredTrades.length}`;
+  
+  document.getElementById('paginationInfo').textContent = `Showing ${start+1}-${end} of ${filteredTrades.length}`;
 }
 
+// ════ MODAL LOGIC ════
 function openTradeModal(id) {
   const idx = allTrades.findIndex(t => t.trade_id === id);
   if(idx === -1) return;
