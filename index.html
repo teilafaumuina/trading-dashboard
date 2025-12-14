@@ -6,6 +6,7 @@
   <title>Teila's Trading Dashboard</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>"/>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
   
@@ -13,16 +14,23 @@
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
     
     body { margin: 0; background: #0a0a0a; color: #fff; font-family: 'Inter', sans-serif; }
+    
+    /* Scrollbar */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #1a1a1a; }
     ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: #444; }
 
-    /* Calendar */
+    /* Calendar Grid */
     .calendar-grid-8 { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; }
+    
+    /* Calendar Styling */
     .calendar-day { position: relative; transition: all 0.2s ease; cursor: pointer; border: 1px solid #2a2a2a; }
     .calendar-day:hover { z-index: 10; transform: scale(1.05); }
     .current-day { box-shadow: 0 0 0 2px #3b82f6; z-index: 5; }
+    .week-total { position: relative; transition: all 0.2s ease; border: 1px solid #2a2a2a; opacity: 0.9; }
+
+    /* Tooltip */
     .calendar-tooltip {
       position: absolute; bottom: 105%; left: 50%; transform: translateX(-50%);
       background: #111; border: 1px solid #333; border-radius: 8px;
@@ -33,16 +41,11 @@
     .tooltip-header { background: #1a1a1a; padding: 8px 12px; font-weight: 600; border-bottom: 1px solid #333; border-radius: 8px 8px 0 0; font-size: 0.75rem; }
     .tooltip-body { padding: 4px; max-height: 200px; overflow-y: auto; }
 
-    /* UI */
+    /* UI Components */
     .metric-card { background: linear-gradient(145deg, #161616 0%, #0f0f0f 100%); border: 1px solid #2a2a2a; transition: transform 0.2s; }
     .metric-card:hover { transform: translateY(-2px); border-color: #444; }
     .chart-container-lg { height: 350px; width: 100%; position: relative; }
     .trade-row:hover { background: rgba(255,255,255,0.03); cursor: pointer; }
-    
-    /* Pagination */
-    .pagination-btn { background: #2a2a2a; border: 1px solid #3a3a3a; padding: 8px 16px; border-radius: 4px; transition: all 0.2s ease; user-select: none; }
-    .pagination-btn:hover:not(:disabled) { background: #3a3a3a; transform: translateY(-1px); }
-    .pagination-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
     /* Modal */
     .modal-overlay { background-color: rgba(0, 0, 0, 0.95); backdrop-filter: blur(4px); }
@@ -60,6 +63,11 @@
     .tag-green { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
     .tag-red { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
     .tag-gray { background: #222; color: #666; border: 1px solid #333; }
+
+    /* Pagination */
+    .pagination-btn { background: #2a2a2a; border: 1px solid #3a3a3a; padding: 8px 16px; border-radius: 4px; transition: all 0.2s ease; user-select: none; }
+    .pagination-btn:hover:not(:disabled) { background: #3a3a3a; transform: translateY(-1px); }
+    .pagination-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
     @media (max-width: 1024px) {
       .calendar-grid-8 { display: flex; flex-wrap: wrap; }
@@ -79,45 +87,71 @@
     <button onclick="navigateTrade(1)" class="nav-arrow right">❯</button>
 
     <div class="bg-[#111] border border-[#333] w-full max-w-[1400px] h-[90vh] rounded-xl overflow-hidden flex flex-col shadow-2xl relative z-50">
+      <!-- Header -->
       <div class="flex justify-between items-center px-6 py-4 border-b border-[#333] bg-[#161616]">
         <div class="flex items-center gap-6">
           <div>
             <h2 id="m_tradeId" class="text-2xl font-bold font-mono text-white tracking-tight">--</h2>
-            <div class="flex items-center gap-2 text-xs text-gray-400 mt-1"><span id="m_date">--</span> • <span id="m_time">--</span></div>
+            <div class="flex items-center gap-2 text-xs text-gray-400 mt-1">
+              <span id="m_date">--</span> • <span id="m_time">--</span>
+            </div>
           </div>
           <div class="h-10 w-px bg-[#333]"></div>
-          <div><span class="text-[10px] uppercase text-gray-500 font-bold tracking-wider">Result</span><div id="m_pnl" class="text-2xl font-bold leading-none mt-1">--</div></div>
-          <div class="hide-mobile ml-4"><span id="m_symbol" class="px-2 py-1 rounded bg-[#222] border border-[#333] text-xs font-mono text-gray-300">--</span><span id="m_side" class="px-2 py-1 rounded text-xs font-bold ml-2 uppercase">--</span></div>
+          <div>
+            <span class="text-[10px] uppercase text-gray-500 font-bold tracking-wider">Result</span>
+            <div id="m_pnl" class="text-2xl font-bold leading-none mt-1">--</div>
+          </div>
+          <div class="hide-mobile ml-4">
+            <span id="m_symbol" class="px-2 py-1 rounded bg-[#222] border border-[#333] text-xs font-mono text-gray-300">--</span>
+            <span id="m_side" class="px-2 py-1 rounded text-xs font-bold ml-2 uppercase">--</span>
+          </div>
         </div>
         <button onclick="closeModal()" class="text-gray-500 hover:text-white text-4xl leading-none">&times;</button>
       </div>
 
+      <!-- Content -->
       <div class="flex-1 overflow-hidden flex flex-col lg:flex-row">
         <div class="w-full lg:w-3/4 bg-black flex items-center justify-center border-b lg:border-b-0 lg:border-r border-[#333] relative h-1/2 lg:h-full group">
           <img id="m_image" src="" class="max-w-full max-h-full object-contain" alt="Chart">
-          <div id="m_no_image" class="hidden flex flex-col items-center text-gray-600"><span class="text-5xl mb-2 opacity-30">📷</span><span>No Screenshot</span></div>
-          <a id="m_full_link" href="#" target="_blank" class="absolute top-4 right-4 bg-black/80 hover:bg-[#222] border border-[#444] text-white px-3 py-1.5 rounded text-xs flex items-center gap-2 transition-all opacity-0 group-hover:opacity-100"><span>Open Original</span> ↗</a>
+          <div id="m_no_image" class="hidden flex flex-col items-center text-gray-600">
+            <span class="text-5xl mb-2 opacity-30">📷</span><span>No Screenshot</span>
+          </div>
+          <a id="m_full_link" href="#" target="_blank" class="absolute top-4 right-4 bg-black/80 hover:bg-[#222] border border-[#444] text-white px-3 py-1.5 rounded text-xs flex items-center gap-2 transition-all opacity-0 group-hover:opacity-100">
+            <span>Open Original</span> ↗
+          </a>
         </div>
+
         <div class="w-full lg:w-1/4 bg-[#111] overflow-y-auto h-1/2 lg:h-full flex flex-col divide-y divide-[#2a2a2a]">
           <div class="grid grid-cols-2">
-            <div class="p-4 border-r border-[#2a2a2a]"><span class="text-[10px] uppercase text-gray-500 font-bold">Entry</span><div id="m_entry_price" class="text-sm font-mono text-white mt-1">--</div></div>
-            <div class="p-4"><span class="text-[10px] uppercase text-gray-500 font-bold">Exit</span><div id="m_exit_price" class="text-sm font-mono text-white mt-1">--</div></div>
+            <div class="p-4 border-r border-[#2a2a2a]">
+              <span class="text-[10px] uppercase text-gray-500 font-bold">Entry</span>
+              <div id="m_entry_price" class="text-sm font-mono text-white mt-1">--</div>
+            </div>
+            <div class="p-4">
+              <span class="text-[10px] uppercase text-gray-500 font-bold">Exit</span>
+              <div id="m_exit_price" class="text-sm font-mono text-white mt-1">--</div>
+            </div>
           </div>
+          
           <div class="p-5 space-y-3">
             <div class="flex justify-between"><span class="text-sm text-gray-400">Setup</span><span id="m_setup" class="text-sm text-white">--</span></div>
             <div class="flex justify-between"><span class="text-sm text-gray-400">Session</span><span id="m_session" class="text-sm text-white">--</span></div>
             <div class="flex justify-between"><span class="text-sm text-gray-400">Score</span><span id="m_score" class="text-sm font-bold text-yellow-400">--</span></div>
           </div>
+
           <div class="p-5 space-y-3">
-            <h3 class="text-[10px] uppercase text-gray-500 font-bold tracking-wider mb-2">Process</h3>
+            <h3 class="text-[10px] uppercase text-gray-500 font-bold tracking-wider mb-2">Process Checklist</h3>
             <div class="flex justify-between items-center"><span class="text-sm text-gray-400">Pre-Trade</span><span id="m_tag_pre" class="process-tag">--</span></div>
             <div class="flex justify-between items-center"><span class="text-sm text-gray-400">Entry</span><span id="m_tag_entry" class="process-tag">--</span></div>
             <div class="flex justify-between items-center"><span class="text-sm text-gray-400">Management</span><span id="m_tag_mgmt" class="process-tag">--</span></div>
             <div class="flex justify-between items-center"><span class="text-sm text-gray-400">Exit</span><span id="m_tag_exit" class="process-tag">--</span></div>
           </div>
+
           <div class="p-5 flex-1">
             <h3 class="text-[10px] uppercase text-gray-500 font-bold tracking-wider mb-3">Journal Notes</h3>
-            <div class="bg-[#181818] p-4 rounded border border-[#2a2a2a] min-h-[100px]"><p id="m_notes" class="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">--</p></div>
+            <div class="bg-[#181818] p-4 rounded border border-[#2a2a2a] min-h-[100px]">
+              <p id="m_notes" class="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">--</p>
+            </div>
           </div>
         </div>
       </div>
@@ -136,11 +170,13 @@
     </div>
   </div>
 
-  <!-- ════════ DASHBOARD ════════ -->
+  <!-- ════════ MAIN DASHBOARD ════════ -->
   <div id="mainDashboard" class="hidden min-h-screen p-4 md:p-6 max-w-[1600px] mx-auto">
     <div class="flex justify-between items-end mb-8">
       <div>
-        <h1 class="text-3xl font-bold flex items-center">Trading Dashboard <span class="w-2.5 h-2.5 bg-green-500 rounded-full ml-3 animate-pulse"></span></h1>
+        <h1 class="text-3xl font-bold flex items-center">
+          Trading Dashboard <span class="w-2.5 h-2.5 bg-green-500 rounded-full ml-3 animate-pulse"></span>
+        </h1>
         <p class="text-sm text-gray-500 mt-1">Live Performance Tracking • Updated <span id="lastUpdated">--</span></p>
       </div>
     </div>
@@ -157,7 +193,9 @@
           <button id="equityByDays" class="px-3 py-1 text-sm rounded bg-[#1a1a1a] text-gray-400" onclick="switchEquityView('days')">Days</button>
         </div>
       </div>
-      <div class="chart-container-lg"><canvas id="equityChart"></canvas></div>
+      <div class="chart-container-lg">
+        <canvas id="equityChart"></canvas>
+      </div>
     </div>
 
     <!-- Calendar & Evaluation -->
@@ -179,7 +217,7 @@
       </div>
     </div>
 
-    <!-- Analysis -->
+    <!-- Charts -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
       <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a]">
         <h2 class="text-lg font-semibold mb-4">Performance by Symbol</h2>
@@ -188,9 +226,9 @@
       </div>
       <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a]">
         <h2 class="text-lg font-semibold mb-4">Analysis</h2>
-        <div class="grid grid-cols-2 gap-4 h-full">
-           <div class="relative h-64"><canvas id="timeAnalysisChart"></canvas></div>
-           <div class="relative h-64"><canvas id="weekdayChart"></canvas></div>
+        <div class="grid grid-cols-2 gap-6 h-full">
+           <div class="relative h-60"><canvas id="timeAnalysisChart"></canvas></div>
+           <div class="relative h-60"><canvas id="weekdayChart"></canvas></div>
         </div>
       </div>
     </div>
@@ -198,7 +236,7 @@
     <!-- Insights -->
     <div id="insightsContainer" class="mb-8"></div>
 
-    <!-- TABLE -->
+    <!-- Table -->
     <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a]">
       <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
         <h2 class="text-lg font-semibold">Trade History</h2>
@@ -213,7 +251,6 @@
           </div>
         </div>
       </div>
-      
       <div class="overflow-x-auto">
         <table class="w-full text-sm text-left">
           <thead class="text-xs text-gray-500 uppercase bg-[#111] border-b border-[#2a2a2a]">
@@ -221,8 +258,7 @@
               <th class="py-3 px-4">Trade ID</th><th class="py-3 px-4">Date</th><th class="py-3 px-4">Symbol</th>
               <th class="py-3 px-4 hide-mobile">Side</th><th class="py-3 px-4 hide-mobile">Entry</th>
               <th class="py-3 px-4 hide-mobile">Exit</th><th class="py-3 px-4 text-right">P&L</th>
-              <th class="py-3 px-4 text-right hide-mobile">Balance</th>
-              <th class="py-3 px-4 text-center">Chart</th>
+              <th class="py-3 px-4 text-right hide-mobile">Balance</th><th class="py-3 px-4 text-center">Chart</th>
             </tr>
           </thead>
           <tbody id="tradesTableBody" class="divide-y divide-[#2a2a2a]"></tbody>
@@ -279,10 +315,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const data = await res.json();
     if(!data.trades) throw new Error("JSON missing 'trades' array");
 
-    // 1. Process Data Oldest -> Newest for Math
     let sorted = [...(data.trades || [])].sort((a,b) => new Date(a.date+' '+a.entry_time) - new Date(b.date+' '+b.entry_time));
     
-    // 2. Calc Balance on sorted array
     let b = STARTING_BALANCE;
     const eqT = [{trade:0, equity:b, date:'Start'}];
     const dMap = new Map();
@@ -292,22 +326,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       b += net;
       eqT.push({trade:i+1, equity:b, date:t.date});
       dMap.set(t.date, (dMap.get(t.date)||0) + net);
-      return { ...t, runningBalance: b }; // Add calculated balance to trade object
+      return { ...t, runningBalance: b };
     });
 
-    // 3. Reverse for Display (Newest First)
     allTrades = sorted.reverse();
     filteredTrades = [...allTrades];
     
-    // 4. Save Global Data
     rawData = { 
-      ...data, 
-      trades: allTrades, // Now Newest -> Oldest with balance
-      equityTrades: eqT,
-      startingBalance: STARTING_BALANCE
+      ...data, trades: allTrades, equityTrades: eqT, startingBalance: STARTING_BALANCE
     };
 
-    // 5. Calc Daily Equity
     let db = STARTING_BALANCE;
     const eqD = [{day:0, equity:db, date:'Start'}];
     Array.from(dMap.entries()).sort((a,b)=>new Date(a[0])-new Date(b[0])).forEach((e,i)=>{ db+=e[1]; eqD.push({day:i+1,equity:db,date:e[0]}); });
@@ -379,8 +407,8 @@ function buildMetrics() {
       ${i.visual ? `
         <div class="flex justify-between items-center">
           <p class="text-2xl font-bold ${i.c}">${i.v}</p>
-          <svg class="w-10 h-10 -rotate-90"><circle cx="24" cy="24" r="20" stroke="#2a2a2a" stroke-width="4" fill="none"></circle><circle cx="24" cy="24" r="20" stroke="${i.p>=50?'#10b981':'#ef4444'}" stroke-width="4" fill="none" stroke-dasharray="${125.6 * i.p / 100} 125.6"></circle></svg>
-        </div>` : `<p class="text-xl sm:text-2xl font-bold ${i.c}">${i.v}</p>`}
+          <svg class="w-10 h-10 -rotate-90"><circle cx="20" cy="20" r="16" stroke="#333" stroke-width="3" fill="none"/><circle cx="20" cy="20" r="16" stroke="${i.p>=50?'#10b981':'#ef4444'}" stroke-width="3" fill="none" stroke-dasharray="${100.5 * i.p / 100} 100.5"></circle></svg>
+        </div>` : `<p class="text-2xl font-bold ${i.c}">${i.v}</p>`}
       ${i.sub ? `<p class="text-xs text-gray-500 mt-1">${i.sub}</p>` : ''}
     </div>`).join('');
 }
@@ -401,10 +429,8 @@ function buildEvaluationPanel() {
   const tpd = uniqueDays ? (t.length/uniqueDays).toFixed(1) : 0;
   const tpw = uniqueDays ? (t.length/(uniqueDays/5)).toFixed(1) : 0; 
 
-  // Streak: Last 5 trades (Show Oldest -> Newest)
   let streakHtml = [];
-  // t is Newest->Oldest. Slice 5 gets newest 5. Reverse gets Oldest->Newest.
-  const recent = t.slice(0, 5).reverse(); 
+  const recent = t.slice(0, 5).reverse();
   for(let i = 0; i < recent.length; i++) {
     const p = parseMoneyValue(recent[i].p_l);
     if(p > 0) streakHtml.push('<span class="text-green-400 font-bold mx-1">W</span>');
@@ -428,9 +454,9 @@ function buildEvaluationPanel() {
   ];
 
   document.getElementById('evaluationPanel').innerHTML = rows.map(r => `
-    <div class="flex justify-between items-center py-2 px-2 hover:bg-[#222]">
-      <span class="text-gray-400 text-sm">${r.l}</span>
-      <span class="font-medium ${r.c||'text-white'}">${r.v}</span>
+    <div class="flex justify-between items-center py-3 px-2 hover:bg-[#222]">
+      <span class="text-gray-400 text-sm font-medium">${r.l}</span>
+      <span class="text-sm ${r.c||'text-white'}">${r.v}</span>
     </div>
   `).join('');
 }
@@ -491,12 +517,15 @@ function renderCalendar() {
 
     const dayOfWeek = new Date(calYear, calMonth, d).getDay(); 
     if(dayOfWeek === 0 || d === daysInMonth) {
+      if(d === daysInMonth && dayOfWeek !== 0) { } 
+      
       let wHtml = `<div class="h-20 bg-transparent border border-transparent rounded-lg"></div>`;
       if(weekTrades > 0) {
         const isProfit = weekPnL >= 0;
         const wBg = isProfit ? 'bg-green-900/10' : 'bg-red-900/10';
         const wBorder = isProfit ? 'border-green-900/40' : 'border-red-900/40';
         const wTxt = isProfit ? 'text-green-400' : 'text-red-400';
+        
         wHtml = `<div class="h-20 rounded-lg border ${wBorder} ${wBg} flex flex-col items-center justify-center relative week-total">
           <span class="text-[9px] uppercase text-gray-500 font-bold mb-1 opacity-70">Week</span>
           <span class="text-sm font-bold ${wTxt}">${formatMoney(weekPnL)}</span>
@@ -569,7 +598,7 @@ function displayTrades(page=1) {
   document.getElementById('tradesTableBody').innerHTML = show.map(t => {
     const {full} = driveUrls(t.screenshot||t.screenshot_url_A);
     const pnl = parseMoneyValue(t.p_l);
-    // Use calculated Running Balance
+    // Calculated Running Balance fallback
     const balance = t.runningBalance || 0;
 
     return `<tr class="trade-row border-b border-[#2a2a2a] transition-colors" onclick="openTradeModal('${t.trade_id}')">
@@ -581,21 +610,19 @@ function displayTrades(page=1) {
       <td class="py-3 px-4 text-left hide-mobile text-sm text-gray-300 font-mono">${parseFloat(t.exit_price).toFixed(2)}</td>
       <td class="py-3 px-4 text-right text-sm font-bold ${pnl>=0?'text-green-400':'text-red-400'}">${formatMoney(pnl)}</td>
       <td class="py-3 px-4 text-right hide-mobile text-sm text-gray-300">$${balance.toFixed(2)}</td>
-      <td class="py-3 px-4 text-center">
-        ${full ? `<div class="screenshot-link" onclick="event.stopPropagation(); openTradeModal('${t.trade_id}')"><span class="text-xs bg-[#333] px-2 py-1 rounded hover:bg-white hover:text-black transition-colors cursor-pointer">IMG</span></div>` : '<span class="text-gray-500">-</span>'}
+      <td class="py-3 px-4 text-center" onclick="event.stopPropagation()">
+        ${full ? `<div class="screenshot-link" onclick="openTradeModal('${t.trade_id}')"><span class="text-xs bg-[#333] px-2 py-1 rounded hover:bg-white hover:text-black transition-colors cursor-pointer">IMG</span></div>` : '<span class="text-gray-500">-</span>'}
       </td>
     </tr>`;
   }).join('');
   
-  // FIX: Pagination Logic
-  const totalPages = Math.ceil(filteredTrades.length/tradesPerPage);
   document.getElementById('paginationInfo').textContent = `Showing ${start+1}-${end} of ${filteredTrades.length}`;
+  // FIX: Button State
   document.getElementById('prevPage').disabled = page <= 1;
-  document.getElementById('nextPage').disabled = page >= totalPages;
+  document.getElementById('nextPage').disabled = page >= Math.ceil(filteredTrades.length/tradesPerPage);
   currentPage = page;
 }
 
-// ════ MODAL LOGIC ════
 function openTradeModal(id) {
   const idx = allTrades.findIndex(t => t.trade_id === id);
   if(idx === -1) return;
@@ -651,13 +678,10 @@ window.filterTrades = () => {
   filteredTrades = allTrades.filter(t => (t.symbol.toLowerCase().includes(q) || t.notes?.toLowerCase().includes(q)) && (type===''?true:type==='win'?parseMoneyValue(t.p_l)>0:parseMoneyValue(t.p_l)<0));
   displayTrades(1);
 }
-// FIX: Robust Change Page Logic
 window.changePage = (d) => {
-  const totalPages = Math.ceil(filteredTrades.length/tradesPerPage);
-  const nextPage = currentPage + d;
-  if(nextPage >= 1 && nextPage <= totalPages) {
-    displayTrades(nextPage);
-  }
+  const max = Math.ceil(filteredTrades.length/tradesPerPage);
+  const next = currentPage+d;
+  if(next>=1 && next<=max) displayTrades(next);
 }
 window.switchEquityView = (mode) => {
   const d = mode==='days' ? rawData.equityDays : rawData.equityTrades;
