@@ -375,8 +375,9 @@
   </div>
 
 <script>
-// Configuration - use the local file we just generated + a timestamp to prevent caching
- const DATA_URL = './data.json?v=' + new Date().getTime();
+// Configuration: UPDATED TO USE STATIC GITHUB FILE
+// Added timestamp ?v=... to prevent caching issues
+const DATA_URL = './data.json?v=' + new Date().getTime();
 
 // State
 let rawData = {};
@@ -585,7 +586,7 @@ function buildMetrics() {
     },
     {
       label: 'Win Rate',
-      value: `${winRate}%`,
+      value: `${winRate.toFixed(2)}%`, // UPDATED: Rounded to 2 decimals
       color: winRate >= 50 ? 'text-green-400' : 'text-red-400',
       visual: 'circle'
     },
@@ -699,7 +700,7 @@ function buildEvaluationPanel() {
     { label: 'Biggest Winner', value: formatMoney(meta.biggestWinner || 0), color: 'text-green-400' },
     { label: 'Biggest Loser', value: formatMoney(meta.biggestLoser || 0), color: 'text-red-400' },
     { label: 'Total Fees', value: `$${parseFloat(meta.totalFees || 0).toFixed(2)}` },
-    { label: 'Win Rate', value: `${meta.winRate || 0}%` },
+    { label: 'Win Rate', value: `${parseFloat(meta.winRate || 0).toFixed(2)}%` }, // UPDATED: Rounded to 2 decimals
     { label: 'Max Drawdown', value: `${parseFloat(meta.maxDrawdownPercent || 0).toFixed(1)}%`, color: 'text-red-400' },
     { label: 'Winning / Losing Days', value: `${winningDays} / ${losingDays}` },
     { label: 'Trades Per Day / Week', value: `${tradesPerDay} / ${tradesPerWeek}` },
