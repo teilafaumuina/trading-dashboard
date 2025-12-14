@@ -375,8 +375,8 @@
   </div>
 
 <script>
-// Configuration
-const DATA_URL = 'https://n8n-xza7.onrender.com/webhook/dashboard?format=json';
+// Configuration - use the local file we just generated + a timestamp to prevent caching
+ const DATA_URL = './data.json?v=' + new Date().getTime();
 
 // State
 let rawData = {};
