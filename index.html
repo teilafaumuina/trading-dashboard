@@ -22,22 +22,23 @@
     ::-webkit-scrollbar-thumb:hover { background: #444; }
 
     /* Calendar Grid - 8 Columns */
-    .calendar-grid-8 { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; }
+    .calendar-grid-8 { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }
     
     /* Calendar Styling */
     .calendar-day { position: relative; transition: all 0.2s ease; cursor: pointer; border: 1px solid #2a2a2a; }
     .calendar-day:hover { z-index: 10; transform: scale(1.05); }
-    .calendar-day-profit { background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3); }
-    .calendar-day-loss { background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); }
     .current-day { box-shadow: 0 0 0 2px #3b82f6; z-index: 5; }
 
+    /* Week Total Styling */
+    .week-total { position: relative; transition: all 0.2s ease; border: 1px solid #2a2a2a; opacity: 0.9; }
+    
     /* Tooltip with Scroll */
     .calendar-tooltip {
       position: absolute; bottom: 105%; left: 50%; transform: translateX(-50%);
       background: #111; border: 1px solid #333; border-radius: 8px;
       visibility: hidden; opacity: 0; transition: all 0.2s;
       min-width: 240px; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.9);
-      pointer-events: none; /* Allows scale transform to work on parent */
+      pointer-events: none; 
     }
     .calendar-day:hover .calendar-tooltip { visibility: visible; opacity: 1; pointer-events: auto; }
     .tooltip-header { background: #1a1a1a; padding: 8px 12px; font-weight: 600; border-bottom: 1px solid #333; border-radius: 8px 8px 0 0; font-size: 0.75rem; }
@@ -279,7 +280,7 @@
 
 <script>
 // ════ CONFIG ════
-// NOTE: Remove ?v= if testing locally (file://), keep it for web
+// NOTE: If running locally, this might fail without a server due to CORS.
 const DATA_URL = './data.json'; 
 const STARTING_BALANCE = 50000;
 
@@ -294,24 +295,20 @@ const formatMoney = (v) => (parseFloat(v)||0)>=0 ? '+$'+Math.abs(v).toFixed(2) :
 const parseMoneyValue = (v) => { if(!v)return 0; const c=v.toString().replace(/[$,]/g,''); return isNaN(parseFloat(c))?0:parseFloat(c); };
 const getNetPnL = (t) => parseMoneyValue(t.p_l) - parseMoneyValue(t.fees||0);
 
-// Helper for Hold Time (in Minutes)
 const getHoldTime = (t) => {
   if(!t.entry_time || !t.exit_time) return 0;
-  // Use generic date to compare times
   const d1 = new Date(`2000-01-01T${t.entry_time}`);
   const d2 = new Date(`2000-01-01T${t.exit_time}`);
   const diffMs = d2 - d1;
   return diffMs > 0 ? Math.floor(diffMs / 60000) : 0;
 };
 
-// Drive Link Fixer (High Res for Modal)
 const driveUrls = (url) => {
   if(!url) return {thumb:null,full:null};
   let id = null;
   const m1 = url.match(/\/file\/d\/([\w-]+)/);
   const m2 = url.match(/id=([\w-]+)/);
   if(m1) id=m1[1]; else if(m2) id=m2[1];
-  
   if(id) return { 
     thumb: `https://drive.google.com/thumbnail?id=${id}&sz=w400`, 
     full: `https://drive.google.com/thumbnail?id=${id}&sz=w1920` 
@@ -322,9 +319,7 @@ const driveUrls = (url) => {
 // ════ INIT ════
 document.addEventListener('DOMContentLoaded', async () => {
   try {
-    // Add timestamp for cache busting ONLY if http/https
     const url = window.location.protocol.startsWith('http') ? `${DATA_URL}?v=${new Date().getTime()}` : DATA_URL;
-    
     const res = await fetch(url);
     if(!res.ok) throw new Error(`HTTP Error: ${res.status}`);
     
@@ -335,17 +330,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     allTrades = rawData.trades;
     filteredTrades = [...allTrades];
 
-    // Calc Equity
     const sorted = [...allTrades].sort((a,b) => new Date(a.date+' '+a.entry_time) - new Date(b.date+' '+b.entry_time));
     const sb = sorted[0]?.Balance ? parseMoneyValue(sorted[0].Balance)-getNetPnL(sorted[0]) : STARTING_BALANCE;
     
-    // By Trade
     let b = sb;
     const eqT = [{trade:0, equity:sb, date:'Start'}];
     sorted.forEach((t,i) => { b+=getNetPnL(t); eqT.push({trade:i+1, equity:b, date:t.date}); });
     rawData.equityTrades = eqT;
     
-    // By Day
     const dMap = new Map(); sorted.forEach(t=>dMap.set(t.date,(dMap.get(t.date)||0)+getNetPnL(t)));
     let db = sb;
     const eqD = [{day:0, equity:sb, date:'Start'}];
@@ -370,7 +362,6 @@ function initDashboard() {
   initCharts(); renderCalendar(); displayTrades();
 }
 
-// ════ METRICS & EVALUATION ════
 function buildMetrics() {
   const t = rawData.trades;
   const net = t.reduce((s,x)=>s+getNetPnL(x),0);
@@ -406,7 +397,6 @@ function buildEvaluationPanel() {
   const wins = t.filter(x=>parseMoneyValue(x.p_l)>0);
   const losses = t.filter(x=>parseMoneyValue(x.p_l)<0);
   
-  // Metrics
   const totalMins = t.reduce((s,x)=>s+getHoldTime(x),0);
   const avgHold = t.length ? (totalMins/t.length).toFixed(0) : 0;
   const activeTrades = wins.length + losses.length;
@@ -417,8 +407,6 @@ function buildEvaluationPanel() {
   const tpd = uniqueDays ? (t.length/uniqueDays).toFixed(1) : 0;
   const tpw = uniqueDays ? (t.length/(uniqueDays/5)).toFixed(1) : 0; 
 
-  // Streak L W W L (Last 10)
-  // Reverse loop from most recent trade (index 0) backwards
   let streakStr = [];
   for(let i=0; i<Math.min(t.length, 10); i++) {
     const p = parseMoneyValue(t[i].p_l);
@@ -426,7 +414,6 @@ function buildEvaluationPanel() {
     else if(p<0) streakStr.push('<span class="text-red-400 font-bold">L</span>');
     else streakStr.push('<span class="text-gray-500">B</span>');
   }
-  // Reverse again to show oldest -> newest (Left to Right)
   const streakDisplay = streakStr.reverse().join(' ');
 
   const rows = [
@@ -452,14 +439,13 @@ function buildEvaluationPanel() {
   `).join('');
 }
 
-// ════ CALENDAR (8 COLS) ════
 let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
 
 function renderCalendar() {
   const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   document.getElementById('calendarMonthYear').textContent = `${mNames[calMonth]} ${calYear}`;
   
-  const firstDay = new Date(calYear, calMonth, 1).getDay(); // 0=Sun, 1=Mon
+  const firstDay = new Date(calYear, calMonth, 1).getDay(); 
   const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
   const offset = firstDay === 0 ? 6 : firstDay - 1;
   const today = new Date();
@@ -469,7 +455,6 @@ function renderCalendar() {
   let html = '';
   let weekTrades = 0, weekPnL = 0;
   
-  // Fill Empty Days
   for(let i=0; i<offset; i++) html += `<div class="h-20 bg-[#111] border border-[#222] rounded-lg"></div>`;
   
   for(let d=1; d<=daysInMonth; d++) {
@@ -488,7 +473,6 @@ function renderCalendar() {
     }
     const isToday = isCurrentMonth && d === currentDay ? 'current-day' : '';
 
-    // Tooltip (Limit 10 + Scroll)
     let tooltip = '';
     if(dayTrades.length) {
       tooltip = `<div class="calendar-tooltip">
@@ -509,21 +493,25 @@ function renderCalendar() {
       ${tooltip}
     </div>`;
 
-    // Week Total Logic
-    const dayOfWeek = new Date(calYear, calMonth, d).getDay(); // 0 = Sunday
+    const dayOfWeek = new Date(calYear, calMonth, d).getDay(); 
     if(dayOfWeek === 0 || d === daysInMonth) {
-      // If month ends mid-week, fill grid until Sunday
-      if(d === daysInMonth && dayOfWeek !== 0) {
-        const remaining = 7 - (dayOfWeek === 0 ? 7 : dayOfWeek); // Unused for grid alignment, logic handled by CSS grid flow
-        // For grid 8 cols, we just insert total next
+      // WEEK TOTAL CELL
+      let wHtml = `<div class="h-20 bg-transparent border border-transparent rounded-lg"></div>`;
+      
+      if(weekTrades > 0) {
+        const isProfit = weekPnL >= 0;
+        const wBg = isProfit ? 'bg-green-900/10' : 'bg-red-900/10';
+        const wBorder = isProfit ? 'border-green-900/40' : 'border-red-900/40';
+        const wTxt = isProfit ? 'text-green-400' : 'text-red-400';
+        
+        wHtml = `<div class="h-20 rounded-lg border ${wBorder} ${wBg} flex flex-col items-center justify-center relative week-total">
+          <span class="text-[9px] uppercase text-gray-500 font-bold mb-1 opacity-70">Week</span>
+          <span class="text-sm font-bold ${wTxt}">${formatMoney(weekPnL)}</span>
+          <span class="text-[10px] text-gray-500">${weekTrades}t</span>
+        </div>`;
       }
       
-      const wTxt = weekPnL>=0 ? 'text-green-400' : 'text-red-400';
-      html += `<div class="h-20 bg-[#1a1a1a] border border-[#333] rounded-lg flex flex-col items-center justify-center relative week-total">
-        <span class="text-[9px] uppercase text-gray-600 font-bold mb-1">Week</span>
-        <span class="text-sm font-bold ${wTxt}">${formatMoney(weekPnL)}</span>
-        <span class="text-[10px] text-gray-500">${weekTrades}t</span>
-      </div>`;
+      html += wHtml;
       weekTrades = 0; weekPnL = 0;
     }
   }
@@ -535,11 +523,9 @@ window.changeCalendarMonth = (d) => {
   renderCalendar();
 }
 
-// ════ CHARTS ════
 function initCharts() {
   Chart.defaults.color='#666'; Chart.defaults.borderColor='#2a2a2a';
   
-  // EQUITY CURVE: COLOR FLIP LOGIC
   const ctx = document.getElementById('equityChart').getContext('2d');
   equityChart = new Chart(ctx, {
     type: 'line',
@@ -561,7 +547,6 @@ function initCharts() {
   });
   switchEquityView('trades');
 
-  // Other Charts
   new Chart(document.getElementById('timeAnalysisChart'), {
     type: 'bar',
     data: { labels: Object.keys(rawData.hours).map(k=>k+':00'), datasets:[{data: Object.values(rawData.hours).map(v=>v.pnl), backgroundColor: Object.values(rawData.hours).map(v=>v.pnl>=0?'#10b981':'#ef4444')}] },
@@ -584,7 +569,6 @@ function initCharts() {
   });
 }
 
-// ════ MODAL & TABLE ════
 function displayTrades(page=1) {
   const start = (page-1)*tradesPerPage;
   const end = Math.min(start+tradesPerPage, filteredTrades.length);
@@ -607,7 +591,6 @@ function displayTrades(page=1) {
   document.getElementById('paginationInfo').textContent = `${start+1}-${end} of ${filteredTrades.length}`;
 }
 
-// Modal Logic
 function openTradeModal(id) {
   const idx = allTrades.findIndex(t => t.trade_id === id);
   if(idx === -1) return;
@@ -657,15 +640,6 @@ function renderModalContent() {
   setTag('m_tag_mgmt', t.trade_management); setTag('m_tag_exit', t.trade_exit);
 }
 
-// Misc Logic
-function buildSymbolPerformance() {
-  const s = Object.entries(rawData.symbols).sort((a,b)=>b[1].pnl-a[1].pnl).slice(0,5);
-  document.getElementById('symbolPerformance').innerHTML = s.map(([k,v])=>`<div class="flex justify-between p-3 bg-[#0a0a0a] rounded"><span class="font-medium">${k}</span><div class="text-right"><span class="${v.pnl>=0?'text-green-400':'text-red-400'}">${formatMoney(v.pnl)}</span><span class="text-xs text-gray-500 ml-2">${((v.wins/v.trades)*100).toFixed(0)}% WR</span></div></div>`).join('');
-}
-function buildInsights() {
-  const i = rawData.insights || [];
-  if(i.length) document.getElementById('insightsContainer').innerHTML = `<div class="bg-[#1a1a1a] p-4 rounded border border-[#2a2a2a]"><h3 class="font-bold mb-2">Insights</h3><div class="grid gap-2">${i.map(x=>`<div class="bg-[#111] p-2 text-sm text-gray-300 rounded">${x}</div>`).join('')}</div></div>`;
-}
 window.filterTrades = () => {
   const q = document.getElementById('tradeSearch').value.toLowerCase();
   const type = document.getElementById('tradeFilter').value;
