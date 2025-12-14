@@ -6,6 +6,7 @@
   <title>Teila's Trading Dashboard</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>"/>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
   
@@ -14,15 +15,25 @@
     
     body { margin: 0; background: #0a0a0a; color: #fff; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
     
-    /* Custom Scrollbar */
+    /* Scrollbar */
     ::-webkit-scrollbar { width: 4px; height: 4px; }
     ::-webkit-scrollbar-track { background: #1a1a1a; }
     ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
     ::-webkit-scrollbar-thumb:hover { background: #444; }
 
     /* Calendar Grid */
-    .calendar-grid-8 { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 2px; }
-    @media (min-width: 768px) { .calendar-grid-8 { gap: 4px; } }
+    /* Mobile: Ensure min-width so it scrolls instead of squishing */
+    .calendar-grid-8 { 
+      display: grid; 
+      grid-template-columns: repeat(8, minmax(0, 1fr)); 
+      gap: 4px; 
+      min-width: 700px; /* Forces scroll on mobile */
+    }
+    .calendar-scroll-wrapper {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 10px; /* Space for scrollbar */
+    }
     
     /* Calendar Styling */
     .calendar-day { position: relative; transition: all 0.2s ease; cursor: pointer; border: 1px solid #2a2a2a; }
@@ -78,7 +89,6 @@
       .hide-mobile { display: none; }
       .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; } 
       table { min-width: 600px; }
-      .calendar-grid-8 { gap: 2px; }
     }
   </style>
 </head>
@@ -86,10 +96,7 @@
 
   <!-- ════════ MODAL ════════ -->
   <div id="tradeModal" class="hidden fixed inset-0 z-[999] modal-overlay flex flex-col items-center justify-center p-0 lg:p-6">
-    <!-- Close Button (Mobile Only) -->
     <button onclick="closeModal()" class="lg:hidden absolute top-4 right-4 z-[1000] text-white bg-black/50 rounded-full w-10 h-10 flex items-center justify-center text-2xl">&times;</button>
-
-    <!-- Nav Arrows (Desktop) -->
     <button onclick="navigateTrade(-1)" class="nav-arrow left hidden lg:flex">❮</button>
     <button onclick="navigateTrade(1)" class="nav-arrow right hidden lg:flex">❯</button>
 
@@ -100,93 +107,56 @@
         <div class="flex items-center gap-6">
           <div>
             <h2 id="m_tradeId" class="text-2xl font-bold font-mono text-white tracking-tight">--</h2>
-            <div class="flex items-center gap-2 text-xs text-gray-400 mt-1">
-              <span id="m_date">--</span> • <span id="m_time">--</span>
-            </div>
+            <div class="flex items-center gap-2 text-xs text-gray-400 mt-1"><span id="m_date">--</span> • <span id="m_time">--</span></div>
           </div>
           <div class="h-10 w-px bg-[#333]"></div>
-          <div>
-            <span class="text-[10px] uppercase text-gray-500 font-bold tracking-wider">Result</span>
-            <div id="m_pnl" class="text-2xl font-bold leading-none mt-1">--</div>
-          </div>
-          <div class="ml-4">
-            <span id="m_symbol" class="px-2 py-1 rounded bg-[#222] border border-[#333] text-xs font-mono text-gray-300">--</span>
-            <span id="m_side" class="px-2 py-1 rounded text-xs font-bold ml-2 uppercase">--</span>
-          </div>
+          <div><span class="text-[10px] uppercase text-gray-500 font-bold tracking-wider">Result</span><div id="m_pnl" class="text-2xl font-bold leading-none mt-1">--</div></div>
+          <div class="ml-4"><span id="m_symbol" class="px-2 py-1 rounded bg-[#222] border border-[#333] text-xs font-mono text-gray-300">--</span><span id="m_side" class="px-2 py-1 rounded text-xs font-bold ml-2 uppercase">--</span></div>
         </div>
         <button onclick="closeModal()" class="text-gray-500 hover:text-white text-4xl leading-none">&times;</button>
       </div>
 
-      <!-- Content -->
       <div class="flex-1 overflow-hidden flex flex-col lg:flex-row">
-        
-        <!-- Image Area (Top on Mobile, Left on Desktop) -->
+        <!-- Image Area -->
         <div class="w-full lg:w-3/4 h-[40vh] lg:h-full bg-black flex items-center justify-center border-b border-[#333] lg:border-b-0 lg:border-r relative group">
           <img id="m_image" src="" class="max-w-full max-h-full object-contain" alt="Chart">
-          <div id="m_no_image" class="hidden flex flex-col items-center text-gray-600">
-            <span class="text-5xl mb-2 opacity-30">📷</span><span>No Screenshot</span>
-          </div>
-          <a id="m_full_link" href="#" target="_blank" class="absolute bottom-4 right-4 lg:top-4 lg:right-4 bg-black/80 hover:bg-[#222] border border-[#444] text-white px-3 py-1.5 rounded text-xs flex items-center gap-2 transition-all opacity-100 lg:opacity-0 lg:group-hover:opacity-100">
-            <span>Open Original</span> ↗
-          </a>
+          <div id="m_no_image" class="hidden flex flex-col items-center text-gray-600"><span class="text-5xl mb-2 opacity-30">📷</span><span>No Screenshot</span></div>
+          <a id="m_full_link" href="#" target="_blank" class="absolute bottom-4 right-4 lg:top-4 lg:right-4 bg-black/80 hover:bg-[#222] border border-[#444] text-white px-3 py-1.5 rounded text-xs flex items-center gap-2 transition-all opacity-100 lg:opacity-0 lg:group-hover:opacity-100"><span>Open Original</span> ↗</a>
         </div>
 
-        <!-- Data Area (Bottom on Mobile, Right on Desktop) -->
+        <!-- Data Area -->
         <div class="w-full lg:w-1/4 h-[60vh] lg:h-full bg-[#111] overflow-y-auto flex flex-col divide-y divide-[#2a2a2a] pb-20 lg:pb-0">
-          
-          <!-- Mobile Header Info (Visible only on Mobile) -->
+          <!-- Mobile Header -->
           <div class="lg:hidden p-4 bg-[#161616]">
             <div class="flex justify-between items-start">
-              <div>
-                <h2 id="m_tradeId_mob" class="text-xl font-bold font-mono text-white">--</h2>
-                <div class="text-xs text-gray-400"><span id="m_date_mob">--</span></div>
-              </div>
-              <div class="text-right">
-                <div id="m_pnl_mob" class="text-xl font-bold">--</div>
-                <span id="m_symbol_mob" class="text-xs font-mono text-gray-400">--</span>
-              </div>
+              <div><h2 id="m_tradeId_mob" class="text-xl font-bold font-mono text-white">--</h2><div class="text-xs text-gray-400"><span id="m_date_mob">--</span></div></div>
+              <div class="text-right"><div id="m_pnl_mob" class="text-xl font-bold">--</div><span id="m_symbol_mob" class="text-xs font-mono text-gray-400">--</span></div>
             </div>
           </div>
 
-          <!-- Prices -->
           <div class="grid grid-cols-2">
-            <div class="p-4 border-r border-[#2a2a2a]">
-              <span class="text-[10px] uppercase text-gray-500 font-bold">Entry</span>
-              <div id="m_entry_price" class="text-sm font-mono text-white mt-1">--</div>
-            </div>
-            <div class="p-4">
-              <span class="text-[10px] uppercase text-gray-500 font-bold">Exit</span>
-              <div id="m_exit_price" class="text-sm font-mono text-white mt-1">--</div>
-            </div>
+            <div class="p-4 border-r border-[#2a2a2a]"><span class="text-[10px] uppercase text-gray-500 font-bold">Entry</span><div id="m_entry_price" class="text-sm font-mono text-white mt-1">--</div></div>
+            <div class="p-4"><span class="text-[10px] uppercase text-gray-500 font-bold">Exit</span><div id="m_exit_price" class="text-sm font-mono text-white mt-1">--</div></div>
           </div>
-          
-          <!-- Details -->
           <div class="p-5 space-y-3">
             <div class="flex justify-between"><span class="text-sm text-gray-400">Setup</span><span id="m_setup" class="text-sm text-white">--</span></div>
             <div class="flex justify-between"><span class="text-sm text-gray-400">Session</span><span id="m_session" class="text-sm text-white">--</span></div>
             <div class="flex justify-between"><span class="text-sm text-gray-400">Score</span><span id="m_score" class="text-sm font-bold text-yellow-400">--</span></div>
           </div>
-
-          <!-- Execution Tags -->
           <div class="p-5 space-y-3">
-            <h3 class="text-[10px] uppercase text-gray-500 font-bold tracking-wider mb-2">Process Checklist</h3>
+            <h3 class="text-[10px] uppercase text-gray-500 font-bold tracking-wider mb-2">Process</h3>
             <div class="flex justify-between items-center"><span class="text-sm text-gray-400">Pre-Trade</span><span id="m_tag_pre" class="process-tag">--</span></div>
             <div class="flex justify-between items-center"><span class="text-sm text-gray-400">Entry</span><span id="m_tag_entry" class="process-tag">--</span></div>
             <div class="flex justify-between items-center"><span class="text-sm text-gray-400">Management</span><span id="m_tag_mgmt" class="process-tag">--</span></div>
             <div class="flex justify-between items-center"><span class="text-sm text-gray-400">Exit</span><span id="m_tag_exit" class="process-tag">--</span></div>
           </div>
-
-          <!-- Notes -->
           <div class="p-5 flex-1">
             <h3 class="text-[10px] uppercase text-gray-500 font-bold tracking-wider mb-3">Journal Notes</h3>
-            <div class="bg-[#181818] p-4 rounded border border-[#2a2a2a] min-h-[100px]">
-              <p id="m_notes" class="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">--</p>
-            </div>
+            <div class="bg-[#181818] p-4 rounded border border-[#2a2a2a] min-h-[100px]"><p id="m_notes" class="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">--</p></div>
           </div>
         </div>
       </div>
 
-      <!-- Mobile Nav Buttons (Floating Bottom) -->
       <div class="lg:hidden absolute bottom-6 left-0 right-0 flex justify-center gap-4 z-50 pointer-events-none">
         <button onclick="navigateTrade(-1)" class="pointer-events-auto bg-[#222] border border-[#444] w-12 h-12 rounded-full text-white flex items-center justify-center shadow-xl">❮</button>
         <button onclick="navigateTrade(1)" class="pointer-events-auto bg-[#222] border border-[#444] w-12 h-12 rounded-full text-white flex items-center justify-center shadow-xl">❯</button>
@@ -194,19 +164,11 @@
     </div>
   </div>
 
-  <!-- ════════ LOADERS ════════ -->
-  <div id="loadingState" class="fixed inset-0 bg-[#0a0a0a] flex items-center justify-center z-50">
-    <div class="text-center"><div class="loading-spinner mx-auto mb-4"></div><p class="text-gray-400">Loading Dashboard...</p></div>
-  </div>
-  <div id="errorState" class="hidden fixed inset-0 bg-[#0a0a0a] flex items-center justify-center z-50">
-    <div class="text-center p-8 bg-[#1a1a1a] rounded border border-red-900 max-w-lg mx-4">
-      <h2 class="text-xl font-bold text-red-400 mb-2">Failed to Load</h2>
-      <p id="errorDetail" class="text-gray-400 mb-4 font-mono text-sm break-all"></p>
-      <button onclick="location.reload()" class="px-4 py-2 bg-red-900 rounded hover:bg-red-800 text-white">Retry</button>
-    </div>
-  </div>
-
   <!-- ════════ MAIN DASHBOARD ════════ -->
+  <div id="loadingState" class="fixed inset-0 bg-[#0a0a0a] flex items-center justify-center z-50">
+    <div class="text-center"><div class="loading-spinner mx-auto mb-4"></div><p class="text-gray-400">Loading...</p></div>
+  </div>
+  
   <div id="mainDashboard" class="hidden min-h-screen p-4 md:p-6 max-w-[1600px] mx-auto">
     <!-- Header -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
@@ -235,46 +197,47 @@
 
     <!-- Calendar & Evaluation -->
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
-      <!-- Calendar -->
+      <!-- Calendar Panel -->
       <div class="xl:col-span-2 bg-[#1a1a1a] p-4 md:p-6 rounded-lg border border-[#2a2a2a]">
         <div class="flex justify-between items-center mb-6">
           <button onclick="changeCalendarMonth(-1)" class="p-2 hover:bg-[#2a2a2a] rounded">❮</button>
           <h2 id="calendarMonthYear" class="text-lg font-semibold"></h2>
           <button onclick="changeCalendarMonth(1)" class="p-2 hover:bg-[#2a2a2a] rounded">❯</button>
         </div>
-        <div class="calendar-grid-8 mb-2 text-center text-[10px] md:text-xs text-gray-500 font-bold uppercase tracking-wider">
-          <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div><div class="text-gray-300">Total</div>
+        
+        <!-- SCROLL WRAPPER FOR MOBILE -->
+        <div class="calendar-scroll-wrapper">
+          <div class="calendar-grid-8 mb-2 text-center text-[10px] md:text-xs text-gray-500 font-bold uppercase tracking-wider">
+            <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div><div class="text-gray-300">Total</div>
+          </div>
+          <div id="calendarGrid" class="calendar-grid-8"></div>
         </div>
-        <div id="calendarGrid" class="calendar-grid-8"></div>
       </div>
       
-      <!-- Evaluation -->
+      <!-- Evaluation Panel -->
       <div class="bg-[#1a1a1a] p-4 md:p-6 rounded-lg border border-[#2a2a2a]">
         <h2 class="text-lg font-semibold mb-6">Evaluation</h2>
         <div id="evaluationPanel" class="divide-y divide-[#2a2a2a]"></div>
       </div>
     </div>
 
-    <!-- 3-PANEL ANALYSIS (Stacked on Mobile) -->
+    <!-- Analysis Panels -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-      <!-- Panel 1 -->
       <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a] flex flex-col min-h-[350px]">
         <h2 class="text-lg font-semibold mb-4">Performance By Symbol</h2>
         <div id="symbolPerformance" class="space-y-2 mb-4 overflow-y-auto flex-1 pr-2"></div>
       </div>
-      <!-- Panel 2 -->
       <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a] flex flex-col min-h-[350px]">
         <h2 class="text-lg font-semibold mb-4">Performance By Time</h2>
         <div class="relative flex-1 w-full h-64 lg:h-auto"><canvas id="timeAnalysisChart"></canvas></div>
       </div>
-      <!-- Panel 3 -->
       <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a] flex flex-col min-h-[350px]">
         <h2 class="text-lg font-semibold mb-4">Performance By Day</h2>
         <div class="relative flex-1 w-full h-64 lg:h-auto"><canvas id="weekdayChart"></canvas></div>
       </div>
     </div>
 
-    <!-- Latest Execution Widget (Vertical on Mobile) -->
+    <!-- Latest Trade -->
     <div id="lastTradeWidget" class="hidden bg-[#111] rounded-xl border border-[#2a2a2a] mb-8 overflow-hidden group cursor-pointer hover:border-[#444] transition-all" onclick="openLastTrade()">
       <div class="flex flex-col md:flex-row h-auto md:h-[350px]">
         <div class="w-full md:w-3/4 bg-black relative flex items-center justify-center border-b md:border-b-0 md:border-r border-[#2a2a2a] h-64 md:h-full">
@@ -284,10 +247,7 @@
         </div>
         <div class="w-full md:w-1/4 p-6 md:p-8 flex flex-col justify-center bg-gradient-to-b from-[#161616] to-[#111]">
           <div class="mb-6 flex md:block justify-between items-center">
-            <div>
-              <span class="text-xs text-gray-500 uppercase font-bold tracking-wider">Symbol</span>
-              <h3 id="lt_symbol" class="text-2xl md:text-3xl font-bold text-white mt-1">--</h3>
-            </div>
+            <div><span class="text-xs text-gray-500 uppercase font-bold tracking-wider">Symbol</span><h3 id="lt_symbol" class="text-2xl md:text-3xl font-bold text-white mt-1">--</h3></div>
             <span id="lt_side" class="text-xs font-bold px-2 py-0.5 rounded bg-[#222] text-gray-300 inline-block h-fit">--</span>
           </div>
           <div class="mb-8">
@@ -322,7 +282,7 @@
         <table class="w-full text-sm text-left">
           <thead class="text-xs text-gray-500 uppercase bg-[#111] border-b border-[#2a2a2a]">
             <tr>
-              <th class="py-3 px-4">ID</th><th class="py-3 px-4">Date</th><th class="py-3 px-4">Symbol</th>
+              <th class="py-3 px-4">Trade ID</th><th class="py-3 px-4">Date</th><th class="py-3 px-4">Symbol</th>
               <th class="py-3 px-4 hide-mobile">Side</th><th class="py-3 px-4 hide-mobile">Entry</th>
               <th class="py-3 px-4 hide-mobile">Exit</th><th class="py-3 px-4 text-right">P&L</th>
               <th class="py-3 px-4 text-right hide-mobile">Balance</th><th class="py-3 px-4 text-center">View</th>
@@ -426,7 +386,7 @@ function initDashboard() {
   initCharts(); renderCalendar(); displayTrades();
 }
 
-// ════ COMPONENTS ════
+// ════ RENDERERS ════
 function buildSymbolPerformance() {
   const s = Object.entries(rawData.symbols || {}).sort((a,b)=>b[1].pnl-a[1].pnl).slice(0,5);
   document.getElementById('symbolPerformance').innerHTML = s.map(([k,v]) => {
@@ -564,7 +524,7 @@ function renderCalendar() {
   let html = '';
   let weekTrades = 0, weekPnL = 0;
   
-  for(let i=0; i<offset; i++) html += `<div class="h-12 md:h-20 bg-[#111] border border-[#222] rounded-lg"></div>`;
+  for(let i=0; i<offset; i++) html += `<div class="h-14 md:h-20 bg-[#111] border border-[#222] rounded-lg"></div>`;
   
   for(let d=1; d<=daysInMonth; d++) {
     const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
@@ -658,8 +618,9 @@ function initCharts() {
     options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
   });
   
-  // No Chart for Symbol anymore
+  const sData = Object.entries(rawData.symbols).sort((a,b)=>b[1].pnl-a[1].pnl).slice(0,5);
   buildSymbolPerformance(); 
+  // No Chart for Symbol Panel
 
   const wDays=['Monday','Tuesday','Wednesday','Thursday','Friday'];
   new Chart(document.getElementById('weekdayChart'), {
