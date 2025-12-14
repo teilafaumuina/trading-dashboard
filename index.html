@@ -2,27 +2,29 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Teila's Trading Dashboard</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>"/>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Chart.js Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
   
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
     
-    body { margin: 0; background: #0a0a0a; color: #fff; font-family: 'Inter', sans-serif; }
+    body { margin: 0; background: #0a0a0a; color: #fff; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
     
-    /* Scrollbar */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
     ::-webkit-scrollbar-track { background: #1a1a1a; }
-    ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
     ::-webkit-scrollbar-thumb:hover { background: #444; }
 
     /* Calendar Grid */
-    .calendar-grid-8 { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; }
+    .calendar-grid-8 { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 2px; }
+    @media (min-width: 768px) { .calendar-grid-8 { gap: 4px; } }
+    
+    /* Calendar Styling */
     .calendar-day { position: relative; transition: all 0.2s ease; cursor: pointer; border: 1px solid #2a2a2a; }
     .calendar-day:hover { z-index: 10; transform: scale(1.05); }
     .current-day { box-shadow: 0 0 0 2px #3b82f6; z-index: 5; }
@@ -33,7 +35,7 @@
       position: absolute; bottom: 105%; left: 50%; transform: translateX(-50%);
       background: #111; border: 1px solid #333; border-radius: 8px;
       visibility: hidden; opacity: 0; transition: all 0.2s;
-      min-width: 240px; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.9); pointer-events: none;
+      min-width: 200px; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.9); pointer-events: none;
     }
     .calendar-day:hover .calendar-tooltip { visibility: visible; opacity: 1; pointer-events: auto; }
     .tooltip-header { background: #1a1a1a; padding: 8px 12px; font-weight: 600; border-bottom: 1px solid #333; border-radius: 8px 8px 0 0; font-size: 0.75rem; }
@@ -42,7 +44,9 @@
     /* UI Components */
     .metric-card { background: linear-gradient(145deg, #161616 0%, #0f0f0f 100%); border: 1px solid #2a2a2a; transition: transform 0.2s; }
     .metric-card:hover { transform: translateY(-2px); border-color: #444; }
-    .chart-container-lg { height: 350px; width: 100%; position: relative; }
+    .chart-container-lg { height: 250px; width: 100%; position: relative; }
+    @media (min-width: 768px) { .chart-container-lg { height: 350px; } }
+    
     .trade-row:hover { background: rgba(255,255,255,0.03); cursor: pointer; }
 
     /* Modal */
@@ -67,26 +71,32 @@
     .pagination-btn:hover:not(:disabled) { background: #3a3a3a; transform: translateY(-1px); }
     .pagination-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+    /* Mobile Overrides */
     @media (max-width: 1024px) {
-      .calendar-grid-8 { display: flex; flex-wrap: wrap; }
-      .calendar-day, .week-total { width: 13.5%; margin: 2px; }
-      .nav-arrow { top: auto; bottom: 20px; width: 40px; height: 40px; }
-      .nav-arrow.left { left: 30%; } .nav-arrow.right { right: 30%; }
+      .nav-arrow { top: auto; bottom: 20px; width: 45px; height: 45px; }
+      .nav-arrow.left { left: 20px; } .nav-arrow.right { right: 20px; }
       .hide-mobile { display: none; }
-      .table-container { overflow-x: auto; } table { min-width: 600px; }
+      .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; } 
+      table { min-width: 600px; }
+      .calendar-grid-8 { gap: 2px; }
     }
   </style>
 </head>
-<body class="bg-[#0a0a0a] text-white">
+<body class="bg-[#0a0a0a] text-white overflow-x-hidden">
 
   <!-- ════════ MODAL ════════ -->
-  <div id="tradeModal" class="hidden fixed inset-0 z-[999] modal-overlay flex items-center justify-center p-2 lg:p-6">
-    <button onclick="navigateTrade(-1)" class="nav-arrow left">❮</button>
-    <button onclick="navigateTrade(1)" class="nav-arrow right">❯</button>
+  <div id="tradeModal" class="hidden fixed inset-0 z-[999] modal-overlay flex flex-col items-center justify-center p-0 lg:p-6">
+    <!-- Close Button (Mobile Only) -->
+    <button onclick="closeModal()" class="lg:hidden absolute top-4 right-4 z-[1000] text-white bg-black/50 rounded-full w-10 h-10 flex items-center justify-center text-2xl">&times;</button>
 
-    <div class="bg-[#111] border border-[#333] w-full max-w-[1400px] h-[90vh] rounded-xl overflow-hidden flex flex-col shadow-2xl relative z-50">
-      <!-- Header -->
-      <div class="flex justify-between items-center px-6 py-4 border-b border-[#333] bg-[#161616]">
+    <!-- Nav Arrows (Desktop) -->
+    <button onclick="navigateTrade(-1)" class="nav-arrow left hidden lg:flex">❮</button>
+    <button onclick="navigateTrade(1)" class="nav-arrow right hidden lg:flex">❯</button>
+
+    <div class="bg-[#111] border-0 lg:border border-[#333] w-full max-w-[1400px] h-full lg:h-[90vh] lg:rounded-xl overflow-hidden flex flex-col shadow-2xl relative z-50">
+      
+      <!-- Desktop Header -->
+      <div class="hidden lg:flex justify-between items-center px-6 py-4 border-b border-[#333] bg-[#161616]">
         <div class="flex items-center gap-6">
           <div>
             <h2 id="m_tradeId" class="text-2xl font-bold font-mono text-white tracking-tight">--</h2>
@@ -99,7 +109,7 @@
             <span class="text-[10px] uppercase text-gray-500 font-bold tracking-wider">Result</span>
             <div id="m_pnl" class="text-2xl font-bold leading-none mt-1">--</div>
           </div>
-          <div class="hide-mobile ml-4">
+          <div class="ml-4">
             <span id="m_symbol" class="px-2 py-1 rounded bg-[#222] border border-[#333] text-xs font-mono text-gray-300">--</span>
             <span id="m_side" class="px-2 py-1 rounded text-xs font-bold ml-2 uppercase">--</span>
           </div>
@@ -109,19 +119,36 @@
 
       <!-- Content -->
       <div class="flex-1 overflow-hidden flex flex-col lg:flex-row">
-        <!-- Image Area -->
-        <div class="w-full lg:w-3/4 bg-black flex items-center justify-center border-b lg:border-b-0 lg:border-r border-[#333] relative h-1/2 lg:h-full group">
+        
+        <!-- Image Area (Top on Mobile, Left on Desktop) -->
+        <div class="w-full lg:w-3/4 h-[40vh] lg:h-full bg-black flex items-center justify-center border-b border-[#333] lg:border-b-0 lg:border-r relative group">
           <img id="m_image" src="" class="max-w-full max-h-full object-contain" alt="Chart">
           <div id="m_no_image" class="hidden flex flex-col items-center text-gray-600">
             <span class="text-5xl mb-2 opacity-30">📷</span><span>No Screenshot</span>
           </div>
-          <a id="m_full_link" href="#" target="_blank" class="absolute top-4 right-4 bg-black/80 hover:bg-[#222] border border-[#444] text-white px-3 py-1.5 rounded text-xs flex items-center gap-2 transition-all opacity-0 group-hover:opacity-100">
+          <a id="m_full_link" href="#" target="_blank" class="absolute bottom-4 right-4 lg:top-4 lg:right-4 bg-black/80 hover:bg-[#222] border border-[#444] text-white px-3 py-1.5 rounded text-xs flex items-center gap-2 transition-all opacity-100 lg:opacity-0 lg:group-hover:opacity-100">
             <span>Open Original</span> ↗
           </a>
         </div>
 
-        <!-- Data Area -->
-        <div class="w-full lg:w-1/4 bg-[#111] overflow-y-auto h-1/2 lg:h-full flex flex-col divide-y divide-[#2a2a2a]">
+        <!-- Data Area (Bottom on Mobile, Right on Desktop) -->
+        <div class="w-full lg:w-1/4 h-[60vh] lg:h-full bg-[#111] overflow-y-auto flex flex-col divide-y divide-[#2a2a2a] pb-20 lg:pb-0">
+          
+          <!-- Mobile Header Info (Visible only on Mobile) -->
+          <div class="lg:hidden p-4 bg-[#161616]">
+            <div class="flex justify-between items-start">
+              <div>
+                <h2 id="m_tradeId_mob" class="text-xl font-bold font-mono text-white">--</h2>
+                <div class="text-xs text-gray-400"><span id="m_date_mob">--</span></div>
+              </div>
+              <div class="text-right">
+                <div id="m_pnl_mob" class="text-xl font-bold">--</div>
+                <span id="m_symbol_mob" class="text-xs font-mono text-gray-400">--</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Prices -->
           <div class="grid grid-cols-2">
             <div class="p-4 border-r border-[#2a2a2a]">
               <span class="text-[10px] uppercase text-gray-500 font-bold">Entry</span>
@@ -133,12 +160,14 @@
             </div>
           </div>
           
+          <!-- Details -->
           <div class="p-5 space-y-3">
             <div class="flex justify-between"><span class="text-sm text-gray-400">Setup</span><span id="m_setup" class="text-sm text-white">--</span></div>
             <div class="flex justify-between"><span class="text-sm text-gray-400">Session</span><span id="m_session" class="text-sm text-white">--</span></div>
             <div class="flex justify-between"><span class="text-sm text-gray-400">Score</span><span id="m_score" class="text-sm font-bold text-yellow-400">--</span></div>
           </div>
 
+          <!-- Execution Tags -->
           <div class="p-5 space-y-3">
             <h3 class="text-[10px] uppercase text-gray-500 font-bold tracking-wider mb-2">Process Checklist</h3>
             <div class="flex justify-between items-center"><span class="text-sm text-gray-400">Pre-Trade</span><span id="m_tag_pre" class="process-tag">--</span></div>
@@ -147,6 +176,7 @@
             <div class="flex justify-between items-center"><span class="text-sm text-gray-400">Exit</span><span id="m_tag_exit" class="process-tag">--</span></div>
           </div>
 
+          <!-- Notes -->
           <div class="p-5 flex-1">
             <h3 class="text-[10px] uppercase text-gray-500 font-bold tracking-wider mb-3">Journal Notes</h3>
             <div class="bg-[#181818] p-4 rounded border border-[#2a2a2a] min-h-[100px]">
@@ -154,6 +184,12 @@
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Mobile Nav Buttons (Floating Bottom) -->
+      <div class="lg:hidden absolute bottom-6 left-0 right-0 flex justify-center gap-4 z-50 pointer-events-none">
+        <button onclick="navigateTrade(-1)" class="pointer-events-auto bg-[#222] border border-[#444] w-12 h-12 rounded-full text-white flex items-center justify-center shadow-xl">❮</button>
+        <button onclick="navigateTrade(1)" class="pointer-events-auto bg-[#222] border border-[#444] w-12 h-12 rounded-full text-white flex items-center justify-center shadow-xl">❯</button>
       </div>
     </div>
   </div>
@@ -163,9 +199,9 @@
     <div class="text-center"><div class="loading-spinner mx-auto mb-4"></div><p class="text-gray-400">Loading Dashboard...</p></div>
   </div>
   <div id="errorState" class="hidden fixed inset-0 bg-[#0a0a0a] flex items-center justify-center z-50">
-    <div class="text-center p-8 bg-[#1a1a1a] rounded border border-red-900 max-w-lg">
+    <div class="text-center p-8 bg-[#1a1a1a] rounded border border-red-900 max-w-lg mx-4">
       <h2 class="text-xl font-bold text-red-400 mb-2">Failed to Load</h2>
-      <p id="errorDetail" class="text-gray-400 mb-4 font-mono text-sm"></p>
+      <p id="errorDetail" class="text-gray-400 mb-4 font-mono text-sm break-all"></p>
       <button onclick="location.reload()" class="px-4 py-2 bg-red-900 rounded hover:bg-red-800 text-white">Retry</button>
     </div>
   </div>
@@ -173,9 +209,9 @@
   <!-- ════════ MAIN DASHBOARD ════════ -->
   <div id="mainDashboard" class="hidden min-h-screen p-4 md:p-6 max-w-[1600px] mx-auto">
     <!-- Header -->
-    <div class="flex justify-between items-end mb-8">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
       <div>
-        <h1 class="text-3xl font-bold flex items-center">
+        <h1 class="text-2xl md:text-3xl font-bold flex items-center">
           Trading Dashboard <span class="w-2.5 h-2.5 bg-green-500 rounded-full ml-3 animate-pulse"></span>
         </h1>
         <p class="text-sm text-gray-500 mt-1">Live Performance Tracking • Updated <span id="lastUpdated">--</span></p>
@@ -183,10 +219,10 @@
     </div>
 
     <!-- Metrics -->
-    <div id="metricsContainer" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8"></div>
+    <div id="metricsContainer" class="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 mb-8"></div>
 
-    <!-- Equity Curve -->
-    <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a] mb-8">
+    <!-- Equity -->
+    <div class="bg-[#1a1a1a] p-4 md:p-6 rounded-lg border border-[#2a2a2a] mb-8">
       <div class="flex justify-between items-center mb-4">
         <h2 class="text-lg font-semibold">Equity Curve</h2>
         <div class="flex space-x-2">
@@ -199,74 +235,67 @@
 
     <!-- Calendar & Evaluation -->
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
-      <div class="xl:col-span-2 bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a]">
+      <!-- Calendar -->
+      <div class="xl:col-span-2 bg-[#1a1a1a] p-4 md:p-6 rounded-lg border border-[#2a2a2a]">
         <div class="flex justify-between items-center mb-6">
           <button onclick="changeCalendarMonth(-1)" class="p-2 hover:bg-[#2a2a2a] rounded">❮</button>
           <h2 id="calendarMonthYear" class="text-lg font-semibold"></h2>
           <button onclick="changeCalendarMonth(1)" class="p-2 hover:bg-[#2a2a2a] rounded">❯</button>
         </div>
-        <div class="calendar-grid-8 mb-2 text-center text-xs text-gray-500 font-bold uppercase tracking-wider">
+        <div class="calendar-grid-8 mb-2 text-center text-[10px] md:text-xs text-gray-500 font-bold uppercase tracking-wider">
           <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div><div class="text-gray-300">Total</div>
         </div>
         <div id="calendarGrid" class="calendar-grid-8"></div>
       </div>
-      <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a]">
+      
+      <!-- Evaluation -->
+      <div class="bg-[#1a1a1a] p-4 md:p-6 rounded-lg border border-[#2a2a2a]">
         <h2 class="text-lg font-semibold mb-6">Evaluation</h2>
         <div id="evaluationPanel" class="divide-y divide-[#2a2a2a]"></div>
       </div>
     </div>
 
-    <!-- 3-PANEL ANALYSIS (Fixed) -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 h-auto lg:h-[400px]">
-      
-      <!-- Panel 1: By Symbol (No Chart) -->
+    <!-- 3-PANEL ANALYSIS (Stacked on Mobile) -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <!-- Panel 1 -->
       <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a] flex flex-col min-h-[350px]">
         <h2 class="text-lg font-semibold mb-4">Performance By Symbol</h2>
         <div id="symbolPerformance" class="space-y-2 mb-4 overflow-y-auto flex-1 pr-2"></div>
       </div>
-
-      <!-- Panel 2: By Time -->
+      <!-- Panel 2 -->
       <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a] flex flex-col min-h-[350px]">
         <h2 class="text-lg font-semibold mb-4">Performance By Time</h2>
-        <div class="relative flex-1 w-full"><canvas id="timeAnalysisChart"></canvas></div>
+        <div class="relative flex-1 w-full h-64 lg:h-auto"><canvas id="timeAnalysisChart"></canvas></div>
       </div>
-
-      <!-- Panel 3: By Day -->
+      <!-- Panel 3 -->
       <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a] flex flex-col min-h-[350px]">
         <h2 class="text-lg font-semibold mb-4">Performance By Day</h2>
-        <div class="relative flex-1 w-full"><canvas id="weekdayChart"></canvas></div>
+        <div class="relative flex-1 w-full h-64 lg:h-auto"><canvas id="weekdayChart"></canvas></div>
       </div>
     </div>
 
-    <!-- 🌟 NEW: LATEST EXECUTION WIDGET -->
+    <!-- Latest Execution Widget (Vertical on Mobile) -->
     <div id="lastTradeWidget" class="hidden bg-[#111] rounded-xl border border-[#2a2a2a] mb-8 overflow-hidden group cursor-pointer hover:border-[#444] transition-all" onclick="openLastTrade()">
-      <div class="flex flex-col md:flex-row h-[350px]">
-        <!-- Image Area (70%) -->
-        <div class="w-full md:w-3/4 bg-black relative flex items-center justify-center border-b md:border-b-0 md:border-r border-[#2a2a2a] overflow-hidden">
+      <div class="flex flex-col md:flex-row h-auto md:h-[350px]">
+        <div class="w-full md:w-3/4 bg-black relative flex items-center justify-center border-b md:border-b-0 md:border-r border-[#2a2a2a] h-64 md:h-full">
           <img id="lt_image" class="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105" src="" alt="Last Trade">
-          <div id="lt_no_image" class="hidden flex flex-col items-center text-gray-600">
-            <span class="text-4xl mb-2 opacity-30">📷</span><span>No Screenshot</span>
-          </div>
+          <div id="lt_no_image" class="hidden flex flex-col items-center text-gray-600"><span class="text-4xl mb-2 opacity-30">📷</span><span>No Screenshot</span></div>
           <div class="absolute top-4 left-4 bg-black/60 backdrop-blur px-3 py-1 rounded text-xs font-bold text-gray-300 border border-white/10">LATEST EXECUTION</div>
         </div>
-        
-        <!-- Info Area (30%) -->
-        <div class="w-full md:w-1/4 p-8 flex flex-col justify-center bg-gradient-to-b from-[#161616] to-[#111]">
-          <div class="mb-6">
-            <span class="text-xs text-gray-500 uppercase font-bold tracking-wider">Symbol</span>
-            <h3 id="lt_symbol" class="text-3xl font-bold text-white mt-1">--</h3>
-            <span id="lt_side" class="text-xs font-bold px-2 py-0.5 rounded bg-[#222] text-gray-300 mt-2 inline-block">--</span>
+        <div class="w-full md:w-1/4 p-6 md:p-8 flex flex-col justify-center bg-gradient-to-b from-[#161616] to-[#111]">
+          <div class="mb-6 flex md:block justify-between items-center">
+            <div>
+              <span class="text-xs text-gray-500 uppercase font-bold tracking-wider">Symbol</span>
+              <h3 id="lt_symbol" class="text-2xl md:text-3xl font-bold text-white mt-1">--</h3>
+            </div>
+            <span id="lt_side" class="text-xs font-bold px-2 py-0.5 rounded bg-[#222] text-gray-300 inline-block h-fit">--</span>
           </div>
-          
           <div class="mb-8">
             <span class="text-xs text-gray-500 uppercase font-bold tracking-wider">Result</span>
-            <h3 id="lt_pnl" class="text-4xl font-bold mt-1">--</h3>
+            <h3 id="lt_pnl" class="text-3xl md:text-4xl font-bold mt-1">--</h3>
             <p id="lt_date" class="text-sm text-gray-400 mt-2">--</p>
           </div>
-
-          <button class="w-full py-3 bg-[#222] hover:bg-[#333] border border-[#333] text-white rounded text-sm font-bold transition-colors flex items-center justify-center gap-2">
-            View Full Journal <span>→</span>
-          </button>
+          <button class="w-full py-3 bg-[#222] hover:bg-[#333] border border-[#333] text-white rounded text-sm font-bold transition-colors flex items-center justify-center gap-2">View Full Journal <span>→</span></button>
         </div>
       </div>
     </div>
@@ -274,14 +303,14 @@
     <!-- Insights -->
     <div id="insightsContainer" class="mb-8"></div>
 
-    <!-- Trade Table -->
-    <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a]">
+    <!-- Table -->
+    <div class="bg-[#1a1a1a] p-4 md:p-6 rounded-lg border border-[#2a2a2a]">
       <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-        <h2 class="text-lg font-semibold">Trade History</h2>
-        <div class="flex gap-3">
-          <input type="text" id="tradeSearch" placeholder="Search..." class="bg-[#0a0a0a] border border-[#333] rounded px-3 py-1.5 text-sm w-48" onkeyup="filterTrades()">
+        <h2 class="text-lg font-semibold w-full md:w-auto">Trade History</h2>
+        <div class="flex gap-2 w-full md:w-auto">
+          <input type="text" id="tradeSearch" placeholder="Search..." class="bg-[#0a0a0a] border border-[#333] rounded px-3 py-1.5 text-sm flex-1 md:w-48" onkeyup="filterTrades()">
           <select id="tradeFilter" class="bg-[#0a0a0a] border border-[#333] rounded px-3 py-1.5 text-sm" onchange="filterTrades()">
-            <option value="">All Trades</option><option value="win">Winners</option><option value="loss">Losers</option>
+            <option value="">All</option><option value="win">Wins</option><option value="loss">Losses</option>
           </select>
           <div class="flex gap-1">
             <button class="pagination-btn" id="prevPage" onclick="changePage(-1)">❮</button>
@@ -289,12 +318,11 @@
           </div>
         </div>
       </div>
-      
-      <div class="overflow-x-auto">
+      <div class="table-container">
         <table class="w-full text-sm text-left">
           <thead class="text-xs text-gray-500 uppercase bg-[#111] border-b border-[#2a2a2a]">
             <tr>
-              <th class="py-3 px-4">Trade ID</th><th class="py-3 px-4">Date</th><th class="py-3 px-4">Symbol</th>
+              <th class="py-3 px-4">ID</th><th class="py-3 px-4">Date</th><th class="py-3 px-4">Symbol</th>
               <th class="py-3 px-4 hide-mobile">Side</th><th class="py-3 px-4 hide-mobile">Entry</th>
               <th class="py-3 px-4 hide-mobile">Exit</th><th class="py-3 px-4 text-right">P&L</th>
               <th class="py-3 px-4 text-right hide-mobile">Balance</th><th class="py-3 px-4 text-center">View</th>
@@ -394,11 +422,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 function initDashboard() {
   document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
   buildMetrics(); buildSymbolPerformance(); buildEvaluationPanel(); buildInsights();
-  renderLastTradeWidget(); // New Widget
+  renderLastTradeWidget();
   initCharts(); renderCalendar(); displayTrades();
 }
 
-// ════ RENDERERS ════
+// ════ COMPONENTS ════
 function buildSymbolPerformance() {
   const s = Object.entries(rawData.symbols || {}).sort((a,b)=>b[1].pnl-a[1].pnl).slice(0,5);
   document.getElementById('symbolPerformance').innerHTML = s.map(([k,v]) => {
@@ -416,30 +444,21 @@ function buildSymbolPerformance() {
 function renderLastTradeWidget() {
   const t = allTrades[0];
   if(!t) return;
-  
-  const widget = document.getElementById('lastTradeWidget');
-  widget.classList.remove('hidden');
-  
+  document.getElementById('lastTradeWidget').classList.remove('hidden');
   const {full} = driveUrls(t.screenshot||t.screenshot_url_A);
-  const img = document.getElementById('lt_image');
-  const noImg = document.getElementById('lt_no_image');
-  
-  if(full) { img.src = full; img.classList.remove('hidden'); noImg.classList.add('hidden'); }
-  else { img.classList.add('hidden'); noImg.classList.remove('hidden'); }
-  
+  const img=document.getElementById('lt_image'), no=document.getElementById('lt_no_image');
+  if(full) { img.src=full; img.classList.remove('hidden'); no.classList.add('hidden'); }
+  else { img.classList.add('hidden'); no.classList.remove('hidden'); }
   document.getElementById('lt_symbol').textContent = t.symbol;
   document.getElementById('lt_side').textContent = t.side || 'FLAT';
-  document.getElementById('lt_date').textContent = `${t.date} at ${t.entry_time}`;
-  
+  document.getElementById('lt_date').textContent = `${t.date} ${t.entry_time}`;
   const pnl = parseMoneyValue(t.p_l);
-  const pnlEl = document.getElementById('lt_pnl');
-  pnlEl.textContent = formatMoney(pnl);
-  pnlEl.className = `text-4xl font-bold mt-1 ${pnl>=0?'text-green-400':'text-red-400'}`;
+  const pEl = document.getElementById('lt_pnl');
+  pEl.textContent = formatMoney(pnl);
+  pEl.className = `text-3xl md:text-4xl font-bold mt-1 ${pnl>=0?'text-green-400':'text-red-400'}`;
 }
 
-function openLastTrade() {
-  if(allTrades.length > 0) openTradeModal(allTrades[0].trade_id);
-}
+function openLastTrade() { if(allTrades.length > 0) openTradeModal(allTrades[0].trade_id); }
 
 function buildInsights() {
   const i = rawData.insights || [];
@@ -545,7 +564,7 @@ function renderCalendar() {
   let html = '';
   let weekTrades = 0, weekPnL = 0;
   
-  for(let i=0; i<offset; i++) html += `<div class="h-20 bg-[#111] border border-[#222] rounded-lg"></div>`;
+  for(let i=0; i<offset; i++) html += `<div class="h-12 md:h-20 bg-[#111] border border-[#222] rounded-lg"></div>`;
   
   for(let d=1; d<=daysInMonth; d++) {
     const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
@@ -577,25 +596,24 @@ function renderCalendar() {
       tooltip += `</div></div>`;
     }
 
-    html += `<div class="calendar-day h-20 rounded-lg ${border} ${bg} ${isToday} flex flex-col items-center justify-center relative group">
-      <span class="text-xs font-bold text-gray-500 absolute top-1 right-2">${d}</span>
-      ${dayTrades.length ? `<span class="text-sm font-bold ${txt}">${formatMoney(dayPnL)}</span><span class="text-[10px] text-gray-500">${dayTrades.length}t</span>` : ''}
+    html += `<div class="calendar-day h-14 md:h-20 rounded-lg ${border} ${bg} ${isToday} flex flex-col items-center justify-center relative group">
+      <span class="text-[10px] md:text-xs font-bold text-gray-500 absolute top-1 right-2">${d}</span>
+      ${dayTrades.length ? `<span class="text-xs md:text-sm font-bold ${txt}">${formatMoney(dayPnL)}</span><span class="text-[9px] md:text-[10px] text-gray-500 hide-mobile">${dayTrades.length}t</span>` : ''}
       ${tooltip}
     </div>`;
 
     const dayOfWeek = new Date(calYear, calMonth, d).getDay(); 
     if(dayOfWeek === 0 || d === daysInMonth) {
-      let wHtml = `<div class="h-20 bg-transparent border border-transparent rounded-lg"></div>`;
+      let wHtml = `<div class="h-14 md:h-20 bg-transparent border border-transparent rounded-lg"></div>`;
       if(weekTrades > 0) {
         const isProfit = weekPnL >= 0;
         const wBg = isProfit ? 'bg-green-900/10' : 'bg-red-900/10';
         const wBorder = isProfit ? 'border-green-900/40' : 'border-red-900/40';
         const wTxt = isProfit ? 'text-green-400' : 'text-red-400';
-        
-        wHtml = `<div class="h-20 rounded-lg border ${wBorder} ${wBg} flex flex-col items-center justify-center relative week-total">
-          <span class="text-[9px] uppercase text-gray-500 font-bold mb-1 opacity-70">Week</span>
-          <span class="text-sm font-bold ${wTxt}">${formatMoney(weekPnL)}</span>
-          <span class="text-[10px] text-gray-500">${weekTrades}t</span>
+        wHtml = `<div class="h-14 md:h-20 rounded-lg border ${wBorder} ${wBg} flex flex-col items-center justify-center relative week-total">
+          <span class="text-[8px] md:text-[9px] uppercase text-gray-500 font-bold mb-1 opacity-70">Week</span>
+          <span class="text-xs md:text-sm font-bold ${wTxt}">${formatMoney(weekPnL)}</span>
+          <span class="text-[9px] md:text-[10px] text-gray-500 hide-mobile">${weekTrades}t</span>
         </div>`;
       }
       html += wHtml;
@@ -640,8 +658,9 @@ function initCharts() {
     options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
   });
   
-  // No Chart for Symbol Panel anymore, just list
-  
+  // No Chart for Symbol anymore
+  buildSymbolPerformance(); 
+
   const wDays=['Monday','Tuesday','Wednesday','Thursday','Friday'];
   new Chart(document.getElementById('weekdayChart'), {
     type: 'bar',
@@ -700,15 +719,20 @@ function renderModalContent() {
   const t = allTrades[currentTradeIndex];
   if(!t) return;
   document.getElementById('m_tradeId').textContent = t.trade_id;
+  document.getElementById('m_tradeId_mob').textContent = t.trade_id;
   document.getElementById('m_date').textContent = t.date;
+  document.getElementById('m_date_mob').textContent = t.date;
   document.getElementById('m_time').textContent = t.entry_time;
   document.getElementById('m_symbol').textContent = t.symbol;
+  document.getElementById('m_symbol_mob').textContent = t.symbol;
   document.getElementById('m_side').textContent = t.side;
   document.getElementById('m_side').className = `px-2 py-1 rounded text-xs font-bold ml-2 uppercase ${t.side?.toLowerCase().includes('long')?'bg-green-900 text-green-200':'bg-red-900 text-red-200'}`;
   
   const pnl = parseMoneyValue(t.p_l);
   document.getElementById('m_pnl').textContent = formatMoney(pnl);
   document.getElementById('m_pnl').className = `text-2xl font-bold leading-none mt-1 ${pnl>=0?'text-green-400':'text-red-400'}`;
+  document.getElementById('m_pnl_mob').textContent = formatMoney(pnl);
+  document.getElementById('m_pnl_mob').className = `text-xl font-bold ${pnl>=0?'text-green-400':'text-red-400'}`;
   
   document.getElementById('m_entry_price').textContent = parseFloat(t.entry_price).toFixed(2);
   document.getElementById('m_exit_price').textContent = parseFloat(t.exit_price).toFixed(2);
