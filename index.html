@@ -22,7 +22,7 @@
     ::-webkit-scrollbar-thumb:hover { background: #444; }
 
     /* Calendar Grid - 8 Columns */
-    .calendar-grid-8 { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }
+    .calendar-grid-8 { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; }
     
     /* Calendar Styling */
     .calendar-day { position: relative; transition: all 0.2s ease; cursor: pointer; border: 1px solid #2a2a2a; }
@@ -280,7 +280,6 @@
 
 <script>
 // ════ CONFIG ════
-// NOTE: If running locally, this might fail without a server due to CORS.
 const DATA_URL = './data.json'; 
 const STARTING_BALANCE = 50000;
 
@@ -360,6 +359,26 @@ function initDashboard() {
   document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
   buildMetrics(); buildSymbolPerformance(); buildEvaluationPanel(); buildInsights();
   initCharts(); renderCalendar(); displayTrades();
+}
+
+// ════ RENDERERS ════
+function buildSymbolPerformance() {
+  const s = Object.entries(rawData.symbols || {}).sort((a,b)=>b[1].pnl-a[1].pnl).slice(0,5);
+  document.getElementById('symbolPerformance').innerHTML = s.map(([k,v]) => {
+    const wr = v.trades > 0 ? ((v.wins/v.trades)*100).toFixed(0) : 0;
+    return `<div class="flex justify-between p-3 bg-[#0a0a0a] rounded border border-[#222]">
+      <div class="font-medium text-sm">${k}</div>
+      <div class="text-right text-sm">
+        <span class="${v.pnl>=0?'text-green-400':'text-red-400'} font-bold">${formatMoney(v.pnl)}</span>
+        <span class="text-gray-500 ml-2 text-xs">${wr}% WR</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function buildInsights() {
+  const i = rawData.insights || [];
+  if(i.length) document.getElementById('insightsContainer').innerHTML = `<div class="bg-[#1a1a1a] p-4 rounded border border-[#2a2a2a]"><h3 class="font-bold mb-2">Insights</h3><div class="grid gap-2">${i.map(x=>`<div class="bg-[#111] p-2 text-sm text-gray-300 rounded">${x}</div>`).join('')}</div></div>`;
 }
 
 function buildMetrics() {
@@ -493,11 +512,18 @@ function renderCalendar() {
       ${tooltip}
     </div>`;
 
-    const dayOfWeek = new Date(calYear, calMonth, d).getDay(); 
+    // Week Total Logic
+    const dayOfWeek = new Date(calYear, calMonth, d).getDay(); // 0 = Sunday
     if(dayOfWeek === 0 || d === daysInMonth) {
-      // WEEK TOTAL CELL
+      // If month ends mid-week, fill grid until Sunday
+      if(d === daysInMonth && dayOfWeek !== 0) {
+        const remaining = 7 - (dayOfWeek === 0 ? 7 : dayOfWeek); 
+        // Just fill visual gap if needed for layout, but grid handles flow
+      }
+      
       let wHtml = `<div class="h-20 bg-transparent border border-transparent rounded-lg"></div>`;
       
+      // ONLY SHOW TOTAL IF TRADES EXIST
       if(weekTrades > 0) {
         const isProfit = weekPnL >= 0;
         const wBg = isProfit ? 'bg-green-900/10' : 'bg-red-900/10';
