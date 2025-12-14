@@ -111,6 +111,7 @@
 
       <!-- Content -->
       <div class="flex-1 overflow-hidden flex flex-col lg:flex-row">
+        <!-- Image Area -->
         <div class="w-full lg:w-3/4 bg-black flex items-center justify-center border-b lg:border-b-0 lg:border-r border-[#333] relative h-1/2 lg:h-full group">
           <img id="m_image" src="" class="max-w-full max-h-full object-contain" alt="Chart">
           <div id="m_no_image" class="hidden flex flex-col items-center text-gray-600">
@@ -121,7 +122,9 @@
           </a>
         </div>
 
+        <!-- Data Area -->
         <div class="w-full lg:w-1/4 bg-[#111] overflow-y-auto h-1/2 lg:h-full flex flex-col divide-y divide-[#2a2a2a]">
+          <!-- Prices -->
           <div class="grid grid-cols-2">
             <div class="p-4 border-r border-[#2a2a2a]">
               <span class="text-[10px] uppercase text-gray-500 font-bold">Entry</span>
@@ -133,12 +136,14 @@
             </div>
           </div>
           
+          <!-- Details -->
           <div class="p-5 space-y-3">
             <div class="flex justify-between"><span class="text-sm text-gray-400">Setup</span><span id="m_setup" class="text-sm text-white">--</span></div>
             <div class="flex justify-between"><span class="text-sm text-gray-400">Session</span><span id="m_session" class="text-sm text-white">--</span></div>
             <div class="flex justify-between"><span class="text-sm text-gray-400">Score</span><span id="m_score" class="text-sm font-bold text-yellow-400">--</span></div>
           </div>
 
+          <!-- Execution Tags -->
           <div class="p-5 space-y-3">
             <h3 class="text-[10px] uppercase text-gray-500 font-bold tracking-wider mb-2">Process Checklist</h3>
             <div class="flex justify-between items-center"><span class="text-sm text-gray-400">Pre-Trade</span><span id="m_tag_pre" class="process-tag">--</span></div>
@@ -147,6 +152,7 @@
             <div class="flex justify-between items-center"><span class="text-sm text-gray-400">Exit</span><span id="m_tag_exit" class="process-tag">--</span></div>
           </div>
 
+          <!-- Notes -->
           <div class="p-5 flex-1">
             <h3 class="text-[10px] uppercase text-gray-500 font-bold tracking-wider mb-3">Journal Notes</h3>
             <div class="bg-[#181818] p-4 rounded border border-[#2a2a2a] min-h-[100px]">
@@ -172,6 +178,7 @@
 
   <!-- ════════ MAIN DASHBOARD ════════ -->
   <div id="mainDashboard" class="hidden min-h-screen p-4 md:p-6 max-w-[1600px] mx-auto">
+    <!-- Header -->
     <div class="flex justify-between items-end mb-8">
       <div>
         <h1 class="text-3xl font-bold flex items-center">
@@ -193,9 +200,7 @@
           <button id="equityByDays" class="px-3 py-1 text-sm rounded bg-[#1a1a1a] text-gray-400" onclick="switchEquityView('days')">Days</button>
         </div>
       </div>
-      <div class="chart-container-lg">
-        <canvas id="equityChart"></canvas>
-      </div>
+      <div class="chart-container-lg"><canvas id="equityChart"></canvas></div>
     </div>
 
     <!-- Calendar & Evaluation -->
@@ -217,26 +222,34 @@
       </div>
     </div>
 
-    <!-- Charts -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-      <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a]">
-        <h2 class="text-lg font-semibold mb-4">Performance by Symbol</h2>
-        <div id="symbolPerformance" class="space-y-2 mb-4"></div>
-        <div class="h-48 relative"><canvas id="symbolChart"></canvas></div>
+    <!-- 3-PANEL ANALYSIS (Fixed Layout) -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 h-auto lg:h-[400px]">
+      
+      <!-- Panel 1: By Symbol -->
+      <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a] flex flex-col min-h-[350px]">
+        <h2 class="text-lg font-semibold mb-4">By Symbol</h2>
+        <div id="symbolPerformance" class="space-y-2 mb-4 overflow-y-auto flex-1 pr-2"></div>
+        <div class="h-32 relative shrink-0"><canvas id="symbolChart"></canvas></div>
       </div>
-      <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a]">
-        <h2 class="text-lg font-semibold mb-4">Analysis</h2>
-        <div class="grid grid-cols-2 gap-6 h-full">
-           <div class="relative h-60"><canvas id="timeAnalysisChart"></canvas></div>
-           <div class="relative h-60"><canvas id="weekdayChart"></canvas></div>
-        </div>
+
+      <!-- Panel 2: By Time -->
+      <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a] flex flex-col min-h-[350px]">
+        <h2 class="text-lg font-semibold mb-4">By Time</h2>
+        <div class="relative flex-1 w-full"><canvas id="timeAnalysisChart"></canvas></div>
       </div>
+
+      <!-- Panel 3: By Day -->
+      <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a] flex flex-col min-h-[350px]">
+        <h2 class="text-lg font-semibold mb-4">By Day</h2>
+        <div class="relative flex-1 w-full"><canvas id="weekdayChart"></canvas></div>
+      </div>
+
     </div>
 
     <!-- Insights -->
     <div id="insightsContainer" class="mb-8"></div>
 
-    <!-- Table -->
+    <!-- Trade Table -->
     <div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a]">
       <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
         <h2 class="text-lg font-semibold">Trade History</h2>
@@ -251,14 +264,15 @@
           </div>
         </div>
       </div>
+      
       <div class="overflow-x-auto">
         <table class="w-full text-sm text-left">
           <thead class="text-xs text-gray-500 uppercase bg-[#111] border-b border-[#2a2a2a]">
             <tr>
-              <th class="py-3 px-4">Trade ID</th><th class="py-3 px-4">Date</th><th class="py-3 px-4">Symbol</th>
+              <th class="py-3 px-4">ID</th><th class="py-3 px-4">Date</th><th class="py-3 px-4">Symbol</th>
               <th class="py-3 px-4 hide-mobile">Side</th><th class="py-3 px-4 hide-mobile">Entry</th>
               <th class="py-3 px-4 hide-mobile">Exit</th><th class="py-3 px-4 text-right">P&L</th>
-              <th class="py-3 px-4 text-right hide-mobile">Balance</th><th class="py-3 px-4 text-center">Chart</th>
+              <th class="py-3 px-4 text-right hide-mobile">Balance</th><th class="py-3 px-4 text-center">View</th>
             </tr>
           </thead>
           <tbody id="tradesTableBody" class="divide-y divide-[#2a2a2a]"></tbody>
@@ -517,15 +531,12 @@ function renderCalendar() {
 
     const dayOfWeek = new Date(calYear, calMonth, d).getDay(); 
     if(dayOfWeek === 0 || d === daysInMonth) {
-      if(d === daysInMonth && dayOfWeek !== 0) { } 
-      
       let wHtml = `<div class="h-20 bg-transparent border border-transparent rounded-lg"></div>`;
       if(weekTrades > 0) {
         const isProfit = weekPnL >= 0;
         const wBg = isProfit ? 'bg-green-900/10' : 'bg-red-900/10';
         const wBorder = isProfit ? 'border-green-900/40' : 'border-red-900/40';
         const wTxt = isProfit ? 'text-green-400' : 'text-red-400';
-        
         wHtml = `<div class="h-20 rounded-lg border ${wBorder} ${wBg} flex flex-col items-center justify-center relative week-total">
           <span class="text-[9px] uppercase text-gray-500 font-bold mb-1 opacity-70">Week</span>
           <span class="text-sm font-bold ${wTxt}">${formatMoney(weekPnL)}</span>
@@ -598,7 +609,6 @@ function displayTrades(page=1) {
   document.getElementById('tradesTableBody').innerHTML = show.map(t => {
     const {full} = driveUrls(t.screenshot||t.screenshot_url_A);
     const pnl = parseMoneyValue(t.p_l);
-    // Calculated Running Balance fallback
     const balance = t.runningBalance || 0;
 
     return `<tr class="trade-row border-b border-[#2a2a2a] transition-colors" onclick="openTradeModal('${t.trade_id}')">
@@ -617,7 +627,6 @@ function displayTrades(page=1) {
   }).join('');
   
   document.getElementById('paginationInfo').textContent = `Showing ${start+1}-${end} of ${filteredTrades.length}`;
-  // FIX: Button State
   document.getElementById('prevPage').disabled = page <= 1;
   document.getElementById('nextPage').disabled = page >= Math.ceil(filteredTrades.length/tradesPerPage);
   currentPage = page;
