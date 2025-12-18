@@ -10,7 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     
-    <!-- Fonts: Inter for UI, JetBrains Mono for Data -->
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -51,7 +51,7 @@
         
         /* ════ COMPONENT STYLING ════ */
         
-        /* High-End Card Style */
+        /* Tech Card */
         .tech-card {
             background: linear-gradient(180deg, #111 0%, #0a0a0a 100%);
             border: 1px solid var(--border-subtle);
@@ -73,15 +73,14 @@
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
         }
 
-        /* Chart Containers */
+        /* Charts */
         .chart-container-lg { height: 280px; width: 100%; position: relative; }
         @media (min-width: 768px) { .chart-container-lg { height: 380px; } }
 
-        /* Calendar Grid */
+        /* Calendar */
         .calendar-grid-8 { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; min-width: 800px; }
         .calendar-scroll-wrapper { overflow-x: auto; padding-bottom: 12px; }
 
-        /* Calendar Day - Floating Pill Style */
         .calendar-day { 
             position: relative; 
             background: #0e0e0e;
@@ -101,7 +100,7 @@
         }
         .current-day { border: 1px solid #3b82f6; box-shadow: 0 0 15px rgba(59, 130, 246, 0.15); }
         
-        /* Table Styling */
+        /* Table */
         .trade-row { transition: background-color 0.15s; }
         .trade-row:hover { background-color: rgba(255,255,255,0.03); cursor: pointer; }
         .table-header { font-size: 0.7rem; letter-spacing: 0.05em; color: #6b7280; font-weight: 600; text-transform: uppercase; }
@@ -112,15 +111,15 @@
         .badge-red { background: rgba(244, 63, 94, 0.1); color: #fb7185; border-color: rgba(244, 63, 94, 0.2); box-shadow: 0 0 10px rgba(244, 63, 94, 0.05); }
         .badge-gray { background: rgba(255, 255, 255, 0.05); color: #9ca3af; border-color: rgba(255, 255, 255, 0.1); }
 
-        /* Glassmorphism Modal */
+        /* Modal Styles */
         .glass-overlay { 
-            background-color: rgba(0, 0, 0, 0.6); 
+            background-color: rgba(0, 0, 0, 0.85); 
             backdrop-filter: blur(8px); 
             -webkit-backdrop-filter: blur(8px);
         }
         .glass-panel {
-            background: rgba(15, 15, 15, 0.95);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: #0a0a0a;
+            border: 1px solid #222;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
         }
 
@@ -162,55 +161,68 @@
 
         /* Mobile Overrides */
         @media (max-width: 1024px) {
-            .nav-arrow { top: auto; bottom: 20px; width: 45px; height: 45px; }
+            .nav-arrow { bottom: 20px; top: auto; transform: none; }
             .nav-arrow.left { left: 20px; }
             .nav-arrow.right { right: 20px; }
             .hide-mobile { display: none; }
             table { min-width: 650px; }
+            
+            /* Modal Mobile Logic: Full Screen */
+            .glass-panel {
+                width: 100% !important;
+                height: 100% !important;
+                max-width: 100% !important;
+                max-height: 100% !important;
+                border-radius: 0 !important;
+                border: none !important;
+            }
         }
     </style>
 </head>
 <body class="overflow-x-hidden selection:bg-green-500 selection:text-white">
 
     <!-- ════════ DAY LIST MODAL ════════ -->
-    <div id="dayModal" class="hidden fixed inset-0 z-[990] glass-overlay flex items-center justify-center p-4" onclick="closeModal('dayModal')">
-        <div onclick="event.stopPropagation()" class="glass-panel w-full max-w-sm md:max-w-md rounded-2xl overflow-hidden relative z-[991] flex flex-col max-h-[70vh]">
-            <div class="flex justify-between items-center px-5 py-4 border-b border-[#222] bg-gradient-to-r from-[#111] to-[#0d0d0d]">
+    <div id="dayModal" class="hidden fixed inset-0 z-[990] glass-overlay flex items-center justify-center lg:p-4" onclick="closeModal('dayModal')">
+        <div onclick="event.stopPropagation()" class="glass-panel w-full lg:max-w-md lg:rounded-2xl overflow-hidden relative z-[991] flex flex-col lg:max-h-[70vh]">
+            <div class="flex justify-between items-center px-5 py-4 border-b border-[#222] bg-[#111]">
                 <div>
                     <h2 id="d_date" class="text-lg font-bold text-white leading-tight font-mono tracking-tight">--</h2>
                     <div id="d_pnl" class="text-sm font-bold mt-1 font-mono">--</div>
                 </div>
-                <button onclick="closeModal('dayModal')" class="bg-[#1a1a1a] text-gray-400 hover:text-white w-8 h-8 rounded-full flex items-center justify-center transition-colors border border-[#333]">&times;</button>
+                <button onclick="closeModal('dayModal')" class="bg-[#222] text-gray-400 hover:text-white w-8 h-8 rounded-full flex items-center justify-center transition-colors border border-[#333]">&times;</button>
             </div>
             <div id="d_tradeList" class="p-2 overflow-y-auto space-y-1 flex-1 bg-[#050505]/50"></div>
         </div>
     </div>
 
     <!-- ════════ TRADE DETAILS MODAL ════════ -->
-    <div id="tradeModal" class="hidden fixed inset-0 z-[1000] glass-overlay flex flex-col items-center justify-center p-0 lg:p-6" onclick="closeModal('tradeModal')">
-        <button onclick="event.stopPropagation(); closeModal('tradeModal')" class="lg:hidden absolute top-4 right-4 z-[1001] text-white bg-black/50 rounded-full w-10 h-10 flex items-center justify-center text-2xl backdrop-blur-md">&times;</button>
+    <div id="tradeModal" class="hidden fixed inset-0 z-[1000] glass-overlay flex flex-col items-center justify-center lg:p-6" onclick="closeModal('tradeModal')">
         <button onclick="event.stopPropagation(); navigateTrade(-1)" class="nav-arrow left hidden lg:flex">❮</button>
         <button onclick="event.stopPropagation(); navigateTrade(1)" class="nav-arrow right hidden lg:flex">❯</button>
 
-        <div onclick="event.stopPropagation()" class="glass-panel w-full max-w-[1400px] h-full lg:h-[90vh] lg:rounded-2xl overflow-hidden flex flex-col relative z-[1001]">
-            <!-- Desktop Header -->
-            <div class="hidden lg:flex justify-between items-center px-8 py-5 border-b border-[#222] bg-[#0f0f0f]">
-                <div class="flex items-center gap-8">
+        <div onclick="event.stopPropagation()" class="glass-panel w-full lg:max-w-[1400px] h-full lg:h-[90vh] lg:rounded-2xl overflow-hidden flex flex-col relative z-[1001]">
+            <!-- Header (Sticky on Mobile) -->
+            <div class="sticky top-0 z-50 flex justify-between items-center px-6 py-4 lg:px-8 lg:py-5 border-b border-[#222] bg-[#0f0f0f] backdrop-blur-md">
+                <div class="flex items-center gap-4 lg:gap-8">
                     <div>
-                        <h2 id="m_tradeId" class="text-3xl font-bold font-mono text-white tracking-tight">--</h2>
-                        <div class="flex items-center gap-2 text-xs text-gray-500 mt-1 font-mono uppercase tracking-wide"><span id="m_date">--</span> <span class="text-gray-700">•</span> <span id="m_time">--</span></div>
+                        <h2 id="m_tradeId" class="text-2xl lg:text-3xl font-bold font-mono text-white tracking-tight">--</h2>
+                        <div class="flex items-center gap-2 text-xs text-gray-500 mt-1 font-mono uppercase tracking-wide">
+                            <span id="m_date">--</span> <span class="text-gray-700">•</span> <span id="m_time">--</span>
+                        </div>
                     </div>
-                    <div class="h-10 w-px bg-[#333]"></div>
-                    <div>
-                        <span class="text-[10px] uppercase text-gray-500 font-bold tracking-widest">Net Result</span>
-                        <div id="m_pnl" class="text-3xl font-bold leading-none mt-1 font-mono">--</div>
-                    </div>
-                    <div class="ml-4">
-                        <span id="m_symbol" class="px-2 py-1 rounded bg-[#1a1a1a] border border-[#333] text-xs font-mono text-gray-300">--</span>
-                        <span id="m_side" class="px-2 py-1 rounded text-xs font-bold ml-2 uppercase tracking-wide">--</span>
+                    
+                    <!-- Desktop Only Stats in Header -->
+                    <div class="hidden lg:flex items-center gap-8">
+                        <div class="h-10 w-px bg-[#333]"></div>
+                        <div>
+                            <span class="text-[10px] uppercase text-gray-500 font-bold tracking-widest">Result</span>
+                            <div id="m_pnl" class="text-3xl font-bold leading-none mt-1 font-mono">--</div>
+                        </div>
                     </div>
                 </div>
-                <button onclick="closeModal('tradeModal')" class="text-gray-600 hover:text-white text-4xl leading-none transition-colors">&times;</button>
+                
+                <!-- Close Button (Visible All Devices) -->
+                <button onclick="closeModal('tradeModal')" class="bg-[#1a1a1a] text-gray-400 hover:text-white w-10 h-10 rounded-full flex items-center justify-center border border-[#333] transition-all hover:bg-red-500/20 hover:border-red-500/50 hover:text-red-500 text-xl leading-none">&times;</button>
             </div>
 
             <div class="flex-1 overflow-hidden flex flex-col lg:flex-row">
@@ -218,16 +230,24 @@
                 <div class="w-full lg:w-3/4 h-[40vh] lg:h-full bg-[#050505] flex items-center justify-center border-b border-[#222] lg:border-b-0 lg:border-r relative group">
                     <img id="m_image" src="" class="max-w-full max-h-full object-contain" alt="Chart">
                     <div id="m_no_image" class="hidden flex flex-col items-center text-gray-700"><span class="text-6xl mb-4 opacity-20">📷</span><span class="font-mono text-sm uppercase tracking-widest">No Screenshot</span></div>
-                    <a id="m_full_link" href="#" target="_blank" class="absolute bottom-6 right-6 lg:top-6 lg:right-6 bg-black/60 hover:bg-black border border-white/10 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all backdrop-blur-md opacity-100 lg:opacity-0 lg:group-hover:opacity-100"><span>OPEN ORIGINAL</span> ↗</a>
+                    
+                    <!-- Fixed: Subtle Open Original Button Top Right -->
+                    <a id="m_full_link" href="#" target="_blank" class="absolute top-4 right-4 bg-black/40 hover:bg-black/80 text-gray-300 hover:text-white border border-white/10 hover:border-white/30 px-3 py-1.5 rounded-full text-[10px] font-bold tracking-wider uppercase transition-all backdrop-blur-sm flex items-center gap-2">
+                        <span>Original</span> ↗
+                    </a>
                 </div>
 
                 <!-- Data Area -->
                 <div class="w-full lg:w-1/4 h-[60vh] lg:h-full bg-[#0a0a0a] overflow-y-auto flex flex-col divide-y divide-[#222] pb-20 lg:pb-0">
-                    <!-- Mobile Header -->
-                    <div class="lg:hidden p-5 bg-[#111] border-b border-[#222]">
-                        <div class="flex justify-between items-start">
-                            <div><h2 id="m_tradeId_mob" class="text-2xl font-bold font-mono text-white">--</h2><div class="text-xs text-gray-500 font-mono mt-1"><span id="m_date_mob">--</span></div></div>
-                            <div class="text-right"><div id="m_pnl_mob" class="text-2xl font-bold font-mono">--</div><span id="m_symbol_mob" class="text-xs font-mono text-gray-400 bg-[#222] px-1 rounded">--</span></div>
+                    <!-- Mobile Stats (Visible only on Mobile) -->
+                    <div class="lg:hidden p-5 bg-[#111] border-b border-[#222] flex justify-between items-center">
+                        <div>
+                            <span class="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Net P&L</span>
+                            <div id="m_pnl_mob" class="text-2xl font-bold font-mono">--</div>
+                        </div>
+                        <div class="text-right">
+                            <span id="m_symbol" class="text-xs font-bold font-mono text-gray-300 bg-[#222] border border-[#333] px-2 py-1 rounded">--</span>
+                            <div id="m_side" class="text-[10px] font-bold uppercase tracking-wide mt-1">--</div>
                         </div>
                     </div>
 
@@ -258,6 +278,7 @@
                 </div>
             </div>
             
+            <!-- Mobile Navigation -->
             <div class="lg:hidden absolute bottom-6 left-0 right-0 flex justify-center gap-4 z-50 pointer-events-none">
                 <button onclick="event.stopPropagation(); navigateTrade(-1)" class="pointer-events-auto bg-[#1a1a1a] border border-[#333] w-14 h-14 rounded-full text-white flex items-center justify-center shadow-xl text-xl backdrop-blur-md">❮</button>
                 <button onclick="event.stopPropagation(); navigateTrade(1)" class="pointer-events-auto bg-[#1a1a1a] border border-[#333] w-14 h-14 rounded-full text-white flex items-center justify-center shadow-xl text-xl backdrop-blur-md">❯</button>
@@ -266,20 +287,22 @@
     </div>
 
     <!-- ════════ REVIEW MODAL ════════ -->
-    <div id="reviewModal" class="hidden fixed inset-0 z-[1000] glass-overlay flex flex-col items-center justify-center p-0 lg:p-6" onclick="closeModal('reviewModal')">
-        <button onclick="event.stopPropagation(); closeModal('reviewModal')" class="lg:hidden absolute top-4 right-4 z-[1001] text-white bg-black/50 rounded-full w-10 h-10 flex items-center justify-center text-2xl backdrop-blur-md">&times;</button>
+    <div id="reviewModal" class="hidden fixed inset-0 z-[1000] glass-overlay flex flex-col items-center justify-center lg:p-6" onclick="closeModal('reviewModal')">
         <button onclick="event.stopPropagation(); navigateReview(-1)" class="nav-arrow left hidden lg:flex">❮</button>
         <button onclick="event.stopPropagation(); navigateReview(1)" class="nav-arrow right hidden lg:flex">❯</button>
 
-        <div onclick="event.stopPropagation()" class="glass-panel w-full max-w-[1200px] h-full lg:h-[85vh] lg:rounded-2xl overflow-hidden flex flex-col shadow-2xl relative z-[1001]">
-            <div class="flex justify-between items-center px-8 py-5 border-b border-[#222] bg-[#0f0f0f]">
+        <div onclick="event.stopPropagation()" class="glass-panel w-full lg:max-w-[1200px] h-full lg:h-[85vh] lg:rounded-2xl overflow-hidden flex flex-col shadow-2xl relative z-[1001]">
+            <!-- Header (Sticky) -->
+            <div class="sticky top-0 z-50 flex justify-between items-center px-6 py-4 lg:px-8 lg:py-5 border-b border-[#222] bg-[#0f0f0f] backdrop-blur-md">
                 <div>
                     <span id="r_type" class="text-[10px] font-bold text-blue-400 uppercase tracking-widest border border-blue-900/40 bg-blue-500/10 px-2 py-1 rounded">--</span>
-                    <h2 id="r_date" class="text-3xl font-bold text-white mt-2 font-mono tracking-tight">--</h2>
+                    <h2 id="r_date" class="text-2xl lg:text-3xl font-bold text-white mt-2 font-mono tracking-tight">--</h2>
                 </div>
-                <button onclick="closeModal('reviewModal')" class="text-gray-600 hover:text-white text-4xl leading-none transition-colors hidden lg:block">&times;</button>
+                <!-- Close Button -->
+                <button onclick="closeModal('reviewModal')" class="bg-[#1a1a1a] text-gray-400 hover:text-white w-10 h-10 rounded-full flex items-center justify-center border border-[#333] transition-all hover:bg-red-500/20 hover:border-red-500/50 hover:text-red-500 text-xl leading-none">&times;</button>
             </div>
 
+            <!-- Stats Bar -->
             <div class="grid grid-cols-2 md:grid-cols-4 border-b border-[#222] bg-[#111]">
                 <div class="p-5 border-r border-[#222]">
                     <span class="text-[10px] uppercase text-gray-500 font-bold tracking-widest">Net P&L</span>
@@ -300,14 +323,16 @@
             </div>
 
             <div class="flex-1 overflow-hidden flex flex-col lg:flex-row bg-[#0a0a0a]">
-                <div class="w-full lg:w-1/2 p-8 overflow-y-auto border-b lg:border-b-0 lg:border-r border-[#222]">
+                <!-- AI Insight -->
+                <div class="w-full lg:w-1/2 p-6 lg:p-8 overflow-y-auto border-b lg:border-b-0 lg:border-r border-[#222]">
                     <div class="flex items-center gap-3 mb-6 pb-4 border-b border-[#222]">
                         <span class="text-2xl">🤖</span>
                         <h3 class="text-sm font-bold uppercase tracking-widest text-gray-400">Mentor Insight</h3>
                     </div>
                     <div id="r_ai_insight" class="prose-custom">--</div>
                 </div>
-                <div class="w-full lg:w-1/2 p-8 overflow-y-auto bg-[#0d0d0d]">
+                <!-- User Reflection -->
+                <div class="w-full lg:w-1/2 p-6 lg:p-8 overflow-y-auto bg-[#0d0d0d]">
                     <div class="flex items-center gap-3 mb-6 pb-4 border-b border-[#222]">
                         <span class="text-2xl">🧠</span>
                         <h3 class="text-sm font-bold uppercase tracking-widest text-gray-400">Personal Reflection</h3>
@@ -316,6 +341,7 @@
                 </div>
             </div>
 
+            <!-- Mobile Nav -->
             <div class="lg:hidden absolute bottom-6 left-0 right-0 flex justify-center gap-4 z-50 pointer-events-none">
                 <button onclick="event.stopPropagation(); navigateReview(-1)" class="pointer-events-auto bg-[#1a1a1a] border border-[#333] w-14 h-14 rounded-full text-white flex items-center justify-center shadow-xl text-xl backdrop-blur-md">❮</button>
                 <button onclick="event.stopPropagation(); navigateReview(1)" class="pointer-events-auto bg-[#1a1a1a] border border-[#333] w-14 h-14 rounded-full text-white flex items-center justify-center shadow-xl text-xl backdrop-blur-md">❯</button>
@@ -702,12 +728,13 @@
                 {l:'Balance', v:'$'+curBal.toFixed(2), c:'text-white', sub:`${((net/rawData.startingBalance)*100).toFixed(2)}% ROI`, mono:true}
             ];
 
+            // NOTE: Updated text-2xl md:text-3xl here for mobile font size adjustment
             document.getElementById('metricsContainer').innerHTML = m.map(i => `<div class="tech-card p-5 rounded-lg flex flex-col justify-between">
                 <p class="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-2">${i.l}</p>
                 ${i.visual ? `<div class="flex justify-between items-center">
-                    <p class="text-3xl font-bold ${i.c} ${i.mono?'font-mono':''} tracking-tight">${i.v}</p>
-                    <svg class="w-10 h-10 -rotate-90"><circle cx="20" cy="20" r="16" stroke="#222" stroke-width="3" fill="none"/><circle cx="20" cy="20" r="16" stroke="${i.p>=50?'#10b981':'#ef4444'}" stroke-width="3" fill="none" stroke-dasharray="${100.5 * i.p / 100} 100.5"></circle></svg>
-                </div>` : `<p class="text-3xl font-bold ${i.c} ${i.mono?'font-mono':''} tracking-tight">${i.v}</p>`}
+                    <p class="text-2xl md:text-3xl font-bold ${i.c} ${i.mono?'font-mono':''} tracking-tight truncate">${i.v}</p>
+                    <svg class="w-10 h-10 -rotate-90 flex-shrink-0"><circle cx="20" cy="20" r="16" stroke="#222" stroke-width="3" fill="none"/><circle cx="20" cy="20" r="16" stroke="${i.p>=50?'#10b981':'#ef4444'}" stroke-width="3" fill="none" stroke-dasharray="${100.5 * i.p / 100} 100.5"></circle></svg>
+                </div>` : `<p class="text-2xl md:text-3xl font-bold ${i.c} ${i.mono?'font-mono':''} tracking-tight truncate">${i.v}</p>`}
                 ${i.sub ? `<p class="text-[10px] text-gray-500 mt-2 font-mono">${i.sub}</p>` : ''}
             </div>`).join('');
         }
@@ -801,7 +828,6 @@
 
                 let bg = 'bg-[#0e0e0e]', border='border-[#1a1a1a]', txt='text-gray-600';
                 if(dayTrades.length) {
-                    // RESTORED: STRONGER BACKGROUND COLORS FOR CALENDAR
                     bg = dayPnL>=0 ? 'bg-[rgba(16,185,129,0.15)]' : 'bg-[rgba(244,63,94,0.15)]';
                     border = dayPnL>=0 ? 'border-green-500/30' : 'border-red-500/30';
                     txt = dayPnL>=0 ? 'text-green-400 text-glow-green' : 'text-red-400 text-glow-red';
@@ -883,14 +909,12 @@
         }
 
         function initCharts() {
-            // New Chart Styling
             Chart.defaults.color='#6b7280';
             Chart.defaults.borderColor='#1f1f1f';
             Chart.defaults.font.family = "'JetBrains Mono', monospace";
             
             const ctx = document.getElementById('equityChart').getContext('2d');
             
-            // RESTORED: DUAL-COLOR EQUITY LOGIC
             equityChart = new Chart(ctx, {
                 type: 'line',
                 data: {
