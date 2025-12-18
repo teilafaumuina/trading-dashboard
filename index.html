@@ -53,13 +53,24 @@
         
         /* Tech Card */
         .tech-card {
-            background: linear-gradient(145deg, #161616 0%, #0f0f0f 100%);
-            border: 1px solid #2a2a2a;
-            transition: transform 0.2s;
+            background: linear-gradient(180deg, #111 0%, #0a0a0a 100%);
+            border: 1px solid var(--border-subtle);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            position: relative;
+            overflow: hidden;
+            transition: border-color 0.3s ease, transform 0.3s ease;
+        }
+        .tech-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            opacity: 0.5;
         }
         .tech-card:hover {
-            border-color: #444;
+            border-color: #333;
             transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
         }
 
         /* Charts */
@@ -94,22 +105,22 @@
         .trade-row:hover { background-color: rgba(255,255,255,0.03); cursor: pointer; }
         .table-header { font-size: 0.7rem; letter-spacing: 0.05em; color: #6b7280; font-weight: 600; text-transform: uppercase; }
 
-        /* Tags */
-        .process-tag { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; display: inline-block; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
-        .tag-green { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
-        .tag-red { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
-        .tag-gray { background: #222; color: #666; border: 1px solid #333; }
+        /* Badges */
+        .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.025em; text-transform: uppercase; border: 1px solid transparent; }
+        .badge-green { background: rgba(16, 185, 129, 0.1); color: #34d399; border-color: rgba(16, 185, 129, 0.2); box-shadow: 0 0 10px rgba(16, 185, 129, 0.05); }
+        .badge-red { background: rgba(244, 63, 94, 0.1); color: #fb7185; border-color: rgba(244, 63, 94, 0.2); box-shadow: 0 0 10px rgba(244, 63, 94, 0.05); }
+        .badge-gray { background: rgba(255, 255, 255, 0.05); color: #9ca3af; border-color: rgba(255, 255, 255, 0.1); }
 
         /* Modal Styles */
-        .modal-overlay { 
-            background-color: rgba(0, 0, 0, 0.9); 
-            backdrop-filter: blur(4px); 
+        .glass-overlay { 
+            background-color: rgba(0, 0, 0, 0.85); 
+            backdrop-filter: blur(8px); 
+            -webkit-backdrop-filter: blur(8px);
         }
-        .modal-panel {
-            background: #111;
-            border: 1px solid #333;
+        .glass-panel {
+            background: #0a0a0a;
+            border: 1px solid #222;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
-            display: flex; flex-direction: column; overflow: hidden;
         }
 
         /* Nav Arrows */
@@ -157,7 +168,7 @@
             table { min-width: 650px; }
             
             /* Modal Mobile Logic: Full Screen */
-            .modal-panel {
+            .glass-panel {
                 width: 100% !important;
                 height: 100% !important;
                 max-width: 100% !important;
@@ -171,27 +182,27 @@
 <body class="overflow-x-hidden selection:bg-green-500 selection:text-white">
 
     <!-- ════════ DAY LIST MODAL ════════ -->
-    <div id="dayModal" class="hidden fixed inset-0 z-[990] modal-overlay flex items-center justify-center lg:p-4" onclick="closeModal('dayModal')">
-        <div onclick="event.stopPropagation()" class="modal-panel w-full lg:max-w-md lg:rounded-xl relative z-[991] flex flex-col lg:max-h-[70vh]">
-            <div class="flex justify-between items-center px-5 py-4 border-b border-[#333] bg-[#161616]">
+    <div id="dayModal" class="hidden fixed inset-0 z-[990] glass-overlay flex items-center justify-center lg:p-4" onclick="closeModal('dayModal')">
+        <div onclick="event.stopPropagation()" class="glass-panel w-full lg:max-w-md lg:rounded-2xl overflow-hidden relative z-[991] flex flex-col lg:max-h-[70vh]">
+            <div class="flex justify-between items-center px-5 py-4 border-b border-[#222] bg-[#111]">
                 <div>
                     <h2 id="d_date" class="text-lg font-bold text-white leading-tight font-mono tracking-tight">--</h2>
                     <div id="d_pnl" class="text-sm font-bold mt-1 font-mono">--</div>
                 </div>
-                <button onclick="closeModal('dayModal')" class="bg-[#222] text-gray-400 hover:text-white w-8 h-8 rounded-full flex items-center justify-center border border-[#333]">&times;</button>
+                <button onclick="closeModal('dayModal')" class="bg-[#222] text-gray-400 hover:text-white w-8 h-8 rounded-full flex items-center justify-center transition-colors border border-[#333]">&times;</button>
             </div>
-            <div id="d_tradeList" class="p-2 overflow-y-auto space-y-1 flex-1"></div>
+            <div id="d_tradeList" class="p-2 overflow-y-auto space-y-1 flex-1 bg-[#050505]/50"></div>
         </div>
     </div>
 
     <!-- ════════ TRADE DETAILS MODAL ════════ -->
-    <div id="tradeModal" class="hidden fixed inset-0 z-[1000] modal-overlay flex flex-col items-center justify-center lg:p-6" onclick="closeModal('tradeModal')">
+    <div id="tradeModal" class="hidden fixed inset-0 z-[1000] glass-overlay flex flex-col items-center justify-center lg:p-6" onclick="closeModal('tradeModal')">
         <button onclick="event.stopPropagation(); navigateTrade(-1)" class="nav-arrow left hidden lg:flex">❮</button>
         <button onclick="event.stopPropagation(); navigateTrade(1)" class="nav-arrow right hidden lg:flex">❯</button>
 
-        <div onclick="event.stopPropagation()" class="modal-panel w-full lg:max-w-[1400px] h-full lg:h-[90vh] lg:rounded-xl overflow-hidden flex flex-col relative z-[1001]">
+        <div onclick="event.stopPropagation()" class="glass-panel w-full lg:max-w-[1400px] h-full lg:h-[90vh] lg:rounded-2xl overflow-hidden flex flex-col relative z-[1001]">
             <!-- Header (Sticky on Mobile) -->
-            <div class="sticky top-0 z-50 flex justify-between items-center px-6 py-4 lg:px-8 lg:py-5 border-b border-[#333] bg-[#161616]">
+            <div class="sticky top-0 z-50 flex justify-between items-center px-6 py-4 lg:px-8 lg:py-5 border-b border-[#222] bg-[#0f0f0f] backdrop-blur-md">
                 <div class="flex items-center gap-4 lg:gap-8">
                     <div>
                         <h2 id="m_tradeId" class="text-2xl lg:text-3xl font-bold font-mono text-white tracking-tight">--</h2>
@@ -216,12 +227,12 @@
 
             <div class="flex-1 overflow-hidden flex flex-col lg:flex-row">
                 <!-- Image Area -->
-                <div class="w-full lg:w-3/4 h-[40vh] lg:h-full bg-[#050505] flex items-center justify-center border-b border-[#333] lg:border-b-0 lg:border-r relative group">
+                <div class="w-full lg:w-3/4 h-[40vh] lg:h-full bg-[#050505] flex items-center justify-center border-b border-[#222] lg:border-b-0 lg:border-r relative group">
                     <img id="m_image" src="" class="max-w-full max-h-full object-contain" alt="Chart">
                     <div id="m_no_image" class="hidden flex flex-col items-center text-gray-700"><span class="text-6xl mb-4 opacity-20">📷</span><span class="font-mono text-sm uppercase tracking-widest">No Screenshot</span></div>
                     
                     <!-- Fixed: Subtle Open Original Button Top Right -->
-                    <a id="m_full_link" href="#" target="_blank" class="absolute top-4 right-4 bg-black/60 hover:bg-black/80 text-gray-300 hover:text-white border border-white/10 hover:border-white/30 px-3 py-1.5 rounded-full text-[10px] font-bold tracking-wider uppercase transition-all flex items-center gap-2">
+                    <a id="m_full_link" href="#" target="_blank" class="absolute top-4 right-4 bg-black/40 hover:bg-black/80 text-gray-300 hover:text-white border border-white/10 hover:border-white/30 px-3 py-1.5 rounded-full text-[10px] font-bold tracking-wider uppercase transition-all backdrop-blur-sm flex items-center gap-2">
                         <span>Original</span> ↗
                     </a>
                 </div>
@@ -254,10 +265,10 @@
 
                     <div class="p-6 space-y-4 bg-[#0e0e0e]">
                         <h3 class="text-[10px] uppercase text-gray-500 font-bold tracking-widest mb-3">Execution Process</h3>
-                        <div class="flex justify-between items-center"><span class="text-sm text-gray-400">Pre-Trade</span><span id="m_tag_pre" class="process-tag">--</span></div>
-                        <div class="flex justify-between items-center"><span class="text-sm text-gray-400">Entry</span><span id="m_tag_entry" class="process-tag">--</span></div>
-                        <div class="flex justify-between items-center"><span class="text-sm text-gray-400">Management</span><span id="m_tag_mgmt" class="process-tag">--</span></div>
-                        <div class="flex justify-between items-center"><span class="text-sm text-gray-400">Exit</span><span id="m_tag_exit" class="process-tag">--</span></div>
+                        <div class="flex justify-between items-center"><span class="text-sm text-gray-400">Pre-Trade</span><span id="m_tag_pre" class="badge">--</span></div>
+                        <div class="flex justify-between items-center"><span class="text-sm text-gray-400">Entry</span><span id="m_tag_entry" class="badge">--</span></div>
+                        <div class="flex justify-between items-center"><span class="text-sm text-gray-400">Management</span><span id="m_tag_mgmt" class="badge">--</span></div>
+                        <div class="flex justify-between items-center"><span class="text-sm text-gray-400">Exit</span><span id="m_tag_exit" class="badge">--</span></div>
                     </div>
 
                     <div class="p-6 flex-1 bg-[#0a0a0a]">
@@ -276,13 +287,13 @@
     </div>
 
     <!-- ════════ REVIEW MODAL ════════ -->
-    <div id="reviewModal" class="hidden fixed inset-0 z-[1000] modal-overlay flex flex-col items-center justify-center lg:p-6" onclick="closeModal('reviewModal')">
+    <div id="reviewModal" class="hidden fixed inset-0 z-[1000] glass-overlay flex flex-col items-center justify-center lg:p-6" onclick="closeModal('reviewModal')">
         <button onclick="event.stopPropagation(); navigateReview(-1)" class="nav-arrow left hidden lg:flex">❮</button>
         <button onclick="event.stopPropagation(); navigateReview(1)" class="nav-arrow right hidden lg:flex">❯</button>
 
-        <div onclick="event.stopPropagation()" class="modal-panel w-full lg:max-w-[1200px] h-full lg:h-[85vh] lg:rounded-xl relative z-[1001]">
-            <!-- Sticky Header -->
-            <div class="sticky top-0 z-50 flex justify-between items-center px-6 py-4 lg:px-8 lg:py-5 border-b border-[#333] bg-[#0f0f0f] backdrop-blur-md">
+        <div onclick="event.stopPropagation()" class="glass-panel w-full lg:max-w-[1200px] h-full lg:h-[85vh] lg:rounded-2xl overflow-hidden flex flex-col shadow-2xl relative z-[1001]">
+            <!-- Header (Sticky) -->
+            <div class="sticky top-0 z-50 flex justify-between items-center px-6 py-4 lg:px-8 lg:py-5 border-b border-[#222] bg-[#0f0f0f] backdrop-blur-md">
                 <div>
                     <span id="r_type" class="text-[10px] font-bold text-blue-400 uppercase tracking-widest border border-blue-900/40 bg-blue-500/10 px-2 py-1 rounded">--</span>
                     <h2 id="r_date" class="text-2xl lg:text-3xl font-bold text-white mt-2 font-mono tracking-tight">--</h2>
@@ -448,8 +459,7 @@
                         <h3 id="lt_pnl" class="text-4xl md:text-5xl font-bold mt-2 font-mono">--</h3>
                         <p id="lt_date" class="text-xs text-gray-500 mt-3 font-mono">--</p>
                     </div>
-                    <!-- FIXED: Added explicit onclick for button -->
-                    <button onclick="event.stopPropagation(); openLastTrade()" class="w-full py-3 bg-[#1a1a1a] hover:bg-[#252525] border border-[#333] text-gray-200 rounded font-medium transition-all flex items-center justify-center gap-2 group-hover:border-[#555] group-hover:text-white">Full Journal <span class="text-lg leading-none">→</span></button>
+                    <button class="w-full py-3 bg-[#1a1a1a] hover:bg-[#252525] border border-[#333] text-gray-200 rounded font-medium transition-all flex items-center justify-center gap-2 group-hover:border-[#555] group-hover:text-white">Full Journal <span class="text-lg leading-none">→</span></button>
                 </div>
             </div>
         </div>
@@ -627,7 +637,7 @@
         function renderReviewsPanel() {
             const container = document.getElementById('reviewsContainer');
             if(allReviews.length === 0) {
-                container.innerHTML = '<div class="text-gray-500 font-mono text-sm p-2">No reviews found. Run the "End of Day" workflow.</div>';
+                container.innerHTML = '<div class="text-gray-500 font-mono text-sm p-2">No reviews logged in system.</div>';
                 return;
             }
             
@@ -637,16 +647,16 @@
                 const snippet = r.user_reflection ? (r.user_reflection.substring(0, 60) + '...') : 'No notes.';
                 
                 return `
-                <div onclick="openReviewModal('${r.review_id}')" class="min-w-[250px] bg-[#111] p-4 rounded border border-[#333] hover:border-[#555] cursor-pointer transition-all hover:-translate-y-1">
-                    <div class="flex justify-between items-start mb-2">
-                        <span class="text-[10px] uppercase font-bold text-gray-400 bg-[#222] px-1.5 py-0.5 rounded">${r.type || 'Review'}</span>
-                        <span class="text-xs text-gray-500">${r.date}</span>
+                <div onclick="openReviewModal('${r.review_id}')" class="min-w-[280px] bg-[#111] p-5 rounded-lg border border-[#222] hover:border-[#444] cursor-pointer transition-all hover:-translate-y-1 shadow-lg">
+                    <div class="flex justify-between items-start mb-3">
+                        <span class="text-[10px] uppercase font-bold text-gray-400 bg-[#1a1a1a] px-2 py-1 rounded border border-[#333]">${r.type || 'REVIEW'}</span>
+                        <span class="text-xs text-gray-500 font-mono">${r.date}</span>
                     </div>
-                    <div class="mb-2">
-                        <div class="text-lg font-bold ${isWin ? 'text-green-400' : 'text-red-400'}">${formatMoney(pnl)}</div>
-                        <div class="text-[10px] text-gray-500">Score: ${r.avg_score || '-'} • WR: ${r.win_rate || '-'}%</div>
+                    <div class="mb-3">
+                        <div class="text-xl font-bold font-mono ${isWin ? 'text-green-400 text-glow-green' : 'text-red-400 text-glow-red'}">${formatMoney(pnl)}</div>
+                        <div class="text-[10px] text-gray-500 font-mono mt-1">SCORE: <span class="text-gray-300">${r.avg_score || '-'}</span> • WR: <span class="text-gray-300">${r.win_rate || '-'}%</span></div>
                     </div>
-                    <p class="text-xs text-gray-400 italic">"${snippet}"</p>
+                    <p class="text-xs text-gray-500 italic border-t border-[#222] pt-2 mt-2">"${snippet}"</p>
                 </div>`;
             }).join('');
         }
@@ -655,11 +665,11 @@
             const s = Object.entries(rawData.symbols || {}).sort((a,b)=>b[1].pnl-a[1].pnl).slice(0,5);
             document.getElementById('symbolPerformance').innerHTML = s.map(([k,v]) => {
                 const wr = v.trades > 0 ? ((v.wins/v.trades)*100).toFixed(0) : 0;
-                return `<div class="flex justify-between p-3 bg-[#0a0a0a] rounded border border-[#222]">
-                    <div class="font-medium text-sm">${k}</div>
+                return `<div class="flex justify-between p-3 bg-[#111] rounded border border-[#222] hover:border-[#333] transition-colors">
+                    <div class="font-bold text-sm text-gray-300">${k}</div>
                     <div class="text-right text-sm">
-                        <span class="${v.pnl>=0?'text-green-400':'text-red-400'} font-bold">${formatMoney(v.pnl)}</span>
-                        <span class="text-gray-500 ml-2 text-xs">${wr}% WR</span>
+                        <span class="${v.pnl>=0?'text-green-400':'text-red-400'} font-bold font-mono">${formatMoney(v.pnl)}</span>
+                        <span class="text-gray-600 ml-2 text-xs font-mono">${wr}% WR</span>
                     </div>
                 </div>`;
             }).join('');
@@ -681,7 +691,7 @@
             const pnl = getNetPnL(t); // Net
             const pEl = document.getElementById('lt_pnl');
             pEl.textContent = formatMoney(pnl);
-            pEl.className = `text-3xl md:text-4xl font-bold mt-1 ${pnl>=0?'text-green-400':'text-red-400'}`;
+            pEl.className = `text-4xl md:text-5xl font-bold mt-2 font-mono ${pnl>=0?'text-green-400 text-glow-green':'text-red-400 text-glow-red'}`;
         }
 
         function openLastTrade() {
@@ -690,10 +700,10 @@
 
         function buildInsights() {
             const i = rawData.insights || [];
-            if(i.length) document.getElementById('insightsContainer').innerHTML = `<div class="bg-[#1a1a1a] p-6 rounded-lg border border-[#2a2a2a]">
-                <h2 class="text-lg font-semibold mb-4 flex items-center"><span class="mr-2">💡</span> Key Insights</h2>
+            if(i.length) document.getElementById('insightsContainer').innerHTML = `<div class="tech-card rounded-xl p-6 md:p-8">
+                <h2 class="text-lg font-semibold mb-6 flex items-center gap-2"><span class="text-xl">💡</span> Algorithm Insights</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    ${i.map(x => `<div class="bg-[#0a0a0a] p-4 rounded border border-[#2a2a2a]"><p class="text-sm text-gray-300">${x}</p></div>`).join('')}
+                    ${i.map(x => `<div class="bg-[#111] p-4 rounded border border-[#222]"><p class="text-sm text-gray-300 leading-relaxed">${x}</p></div>`).join('')}
                 </div>
             </div>`;
         }
@@ -708,25 +718,24 @@
             const grossWin = wins.reduce((s,x)=>s+getNetPnL(x),0);
             const grossLoss = Math.abs(losses.reduce((s,x)=>s+getNetPnL(x),0));
             const pf = grossLoss > 0 ? grossWin/grossLoss : grossWin;
-            
             const curBal = rawData.startingBalance + net;
 
             const m = [
-                {l:'Net Profit', v:formatMoney(net), c:net>=0?'text-green-400':'text-red-400'},
-                {l:'Win Rate', v:wr.toFixed(2)+'%', c:wr>=50?'text-green-400':'text-red-400', visual:true, p:wr},
-                {l:'Avg Net P&L', v:formatMoney(t.length?net/t.length:0), c:net>=0?'text-green-400':'text-red-400'},
-                {l:'Profit Factor', v:pf.toFixed(2), c:pf>=1?'text-green-400':'text-red-400'},
-                {l:'Balance', v:'$'+curBal.toFixed(2), c:'text-white', sub:`${((net/rawData.startingBalance)*100).toFixed(2)}% ROI`}
+                {l:'Net Profit', v:formatMoney(net), c:net>=0?'text-green-400 text-glow-green':'text-red-400 text-glow-red', mono:true},
+                {l:'Win Rate', v:wr.toFixed(2)+'%', c:wr>=50?'text-green-400':'text-red-400', visual:true, p:wr, mono:true},
+                {l:'Avg Net P&L', v:formatMoney(t.length?net/t.length:0), c:net>=0?'text-green-400':'text-red-400', mono:true},
+                {l:'Profit Factor', v:pf.toFixed(2), c:pf>=1.5?'text-green-400':pf>=1?'text-white':'text-red-400', mono:true},
+                {l:'Balance', v:'$'+curBal.toFixed(2), c:'text-white', sub:`${((net/rawData.startingBalance)*100).toFixed(2)}% ROI`, mono:true}
             ];
 
-            // FIX: Added text-2xl md:text-3xl and truncate for mobile sizing
-            document.getElementById('metricsContainer').innerHTML = m.map(i => `<div class="metric-card p-4 rounded-lg border border-[#2a2a2a]">
-                <p class="text-xs text-gray-500 uppercase font-bold mb-1">${i.l}</p>
+            // NOTE: Updated text-2xl md:text-3xl here for mobile font size adjustment
+            document.getElementById('metricsContainer').innerHTML = m.map(i => `<div class="tech-card p-5 rounded-lg flex flex-col justify-between">
+                <p class="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-2">${i.l}</p>
                 ${i.visual ? `<div class="flex justify-between items-center">
-                    <p class="text-2xl md:text-3xl font-bold ${i.c} truncate">${i.v}</p>
-                    <svg class="w-10 h-10 -rotate-90 flex-shrink-0"><circle cx="20" cy="20" r="16" stroke="#333" stroke-width="3" fill="none"/><circle cx="20" cy="20" r="16" stroke="${i.p>=50?'#10b981':'#ef4444'}" stroke-width="3" fill="none" stroke-dasharray="${100.5 * i.p / 100} 100.5"></circle></svg>
-                </div>` : `<p class="text-2xl md:text-3xl font-bold ${i.c} truncate">${i.v}</p>`}
-                ${i.sub ? `<p class="text-xs text-gray-500 mt-1">${i.sub}</p>` : ''}
+                    <p class="text-2xl md:text-3xl font-bold ${i.c} ${i.mono?'font-mono':''} tracking-tight truncate">${i.v}</p>
+                    <svg class="w-10 h-10 -rotate-90 flex-shrink-0"><circle cx="20" cy="20" r="16" stroke="#222" stroke-width="3" fill="none"/><circle cx="20" cy="20" r="16" stroke="${i.p>=50?'#10b981':'#ef4444'}" stroke-width="3" fill="none" stroke-dasharray="${100.5 * i.p / 100} 100.5"></circle></svg>
+                </div>` : `<p class="text-2xl md:text-3xl font-bold ${i.c} ${i.mono?'font-mono':''} tracking-tight truncate">${i.v}</p>`}
+                ${i.sub ? `<p class="text-[10px] text-gray-500 mt-2 font-mono">${i.sub}</p>` : ''}
             </div>`).join('');
         }
 
@@ -763,30 +772,30 @@
             const recent = t.slice(0, 5).reverse();
             for(let i = 0; i < recent.length; i++) {
                 const p = getNetPnL(recent[i]);
-                if(p > 0) streakHtml.push('<span class="text-green-400 font-bold mx-1">W</span>');
-                else if(p < 0) streakHtml.push('<span class="text-red-400 font-bold mx-1">L</span>');
-                else streakHtml.push('<span class="text-gray-500 mx-1">B</span>');
+                if(p > 0) streakHtml.push('<span class="text-green-400 font-bold mx-1 font-mono">W</span>');
+                else if(p < 0) streakHtml.push('<span class="text-red-400 font-bold mx-1 font-mono">L</span>');
+                else streakHtml.push('<span class="text-gray-500 mx-1 font-mono">B</span>');
             }
 
             const rows = [
-                {l:'Total Number of Trades', v:t.length},
-                {l:'Avg. Net Profit per Trade', v:formatMoney(avgPL), c:avgPL>=0?'text-green-400':'text-red-400'},
-                {l:'Biggest Winner (Net)', v:formatMoney(biggestWinner), c:'text-green-400'},
-                {l:'Biggest Loser (Net)', v:formatMoney(biggestLoser), c:'text-red-400'},
-                {l:'Total Fees Paid', v:`$${totalFees.toFixed(2)}`},
-                {l:'Avg. Hold Time (Minutes)', v:`${avgHold}`},
-                {l:'Winrate (Net, w/o BE)', v:`${realWr}%`},
-                {l:'ROI (Net)', v:`${roi}%`, c:roi>=0?'text-green-400':'text-red-400'},
-                {l:'Max Drawdown', v:`${maxDD.toFixed(2)}%`, c:'text-red-400'},
-                {l:'Winning / Losing Trades', v:`${wins.length} / ${losses.length}`},
-                {l:'Trades Per Day / Week', v:`${tpd} / ${tpw}`},
+                {l:'Total Number of Trades', v:t.length, mono:true},
+                {l:'Avg. Net Profit per Trade', v:formatMoney(avgPL), c:avgPL>=0?'text-green-400':'text-red-400', mono:true},
+                {l:'Biggest Winner (Net)', v:formatMoney(biggestWinner), c:'text-green-400', mono:true},
+                {l:'Biggest Loser (Net)', v:formatMoney(biggestLoser), c:'text-red-400', mono:true},
+                {l:'Total Fees Paid', v:`$${totalFees.toFixed(2)}`, mono:true},
+                {l:'Avg. Hold Time (Minutes)', v:`${avgHold}`, mono:true},
+                {l:'Winrate (Net, w/o BE)', v:`${realWr}%`, mono:true},
+                {l:'ROI (Net)', v:`${roi}%`, c:roi>=0?'text-green-400':'text-red-400', mono:true},
+                {l:'Max Drawdown', v:`${maxDD.toFixed(2)}%`, c:'text-red-400', mono:true},
+                {l:'Winning / Losing Trades', v:`${wins.length} / ${losses.length}`, mono:true},
+                {l:'Trades Per Day / Week', v:`${tpd} / ${tpw}`, mono:true},
                 {l:'Current Streak', v:streakHtml.join('')}
             ];
 
             document.getElementById('evaluationPanel').innerHTML = rows.map(r => 
-                `<div class="flex justify-between items-center py-3 px-2 hover:bg-[#222]">
-                    <span class="text-gray-400 text-sm font-medium">${r.l}</span>
-                    <span class="text-sm ${r.c||'text-white'}">${r.v}</span>
+                `<div class="flex justify-between items-center py-4 px-2 hover:bg-[#111] transition-colors rounded">
+                    <span class="text-gray-500 text-sm font-medium tracking-wide">${r.l}</span>
+                    <span class="text-sm ${r.c||'text-white'} ${r.mono?'font-mono':''} font-bold">${r.v}</span>
                 </div>`
             ).join('');
         }
@@ -819,10 +828,9 @@
 
                 let bg = 'bg-[#0e0e0e]', border='border-[#1a1a1a]', txt='text-gray-600';
                 if(dayTrades.length) {
-                    // STRONG COLORS RESTORED
                     bg = dayPnL>=0 ? 'bg-[rgba(16,185,129,0.15)]' : 'bg-[rgba(244,63,94,0.15)]';
                     border = dayPnL>=0 ? 'border-green-500/30' : 'border-red-500/30';
-                    txt = dayPnL>=0 ? 'text-green-400' : 'text-red-400';
+                    txt = dayPnL>=0 ? 'text-green-400 text-glow-green' : 'text-red-400 text-glow-red';
                 }
 
                 const isToday = isCurrentMonth && d === currentDay ? 'current-day' : '';
@@ -871,21 +879,21 @@
             document.getElementById('d_date').textContent = dateFmt;
             
             const pnlEl = document.getElementById('d_pnl');
-            pnlEl.textContent = (total >= 0 ? 'Day Total: +' : 'Day Total: ') + formatMoney(total).replace(/[+-]/,'');
-            pnlEl.className = `text-sm font-bold ${total>=0?'text-green-400':'text-red-400'}`;
+            pnlEl.textContent = (total >= 0 ? 'DAY TOTAL: +' : 'DAY TOTAL: ') + formatMoney(total).replace(/[+-]/,'');
+            pnlEl.className = `text-sm font-bold font-mono ${total>=0?'text-green-400 text-glow-green':'text-red-400 text-glow-red'}`;
 
             const html = trades.map(t => {
                 const pnl = getNetPnL(t);
                 const isWin = pnl >= 0;
-                return `<div onclick="openTradeModal('${t.trade_id}')" class="flex justify-between items-center p-3 hover:bg-[#222] rounded cursor-pointer border border-transparent hover:border-[#333] transition-colors mb-1">
+                return `<div onclick="openTradeModal('${t.trade_id}')" class="flex justify-between items-center p-3 hover:bg-[#222] rounded cursor-pointer border border-transparent hover:border-[#333] transition-colors mb-1 group">
                     <div class="flex items-center gap-3">
-                        <span class="font-mono text-xs text-gray-500 w-12 text-center bg-[#111] py-1 rounded border border-[#222]">${t.entry_time ? t.entry_time.substring(0,5) : '--:--'}</span>
+                        <span class="font-mono text-xs text-gray-500 w-12 text-center bg-[#111] py-1 rounded border border-[#222] group-hover:border-[#444]">${t.entry_time.substring(0,5)}</span>
                         <div>
                             <div class="font-bold text-sm text-gray-200">${t.symbol}</div>
                             <div class="text-[10px] uppercase text-gray-500 font-bold tracking-wider">${t.side}</div>
                         </div>
                     </div>
-                    <span class="font-bold text-sm ${isWin?'text-green-400':'text-red-400'}">${formatMoney(pnl)}</span>
+                    <span class="font-bold text-sm font-mono ${isWin?'text-green-400':'text-red-400'}">${formatMoney(pnl)}</span>
                 </div>`;
             }).join('');
 
@@ -925,12 +933,14 @@
                         borderWidth: 2,
                         pointRadius: 0,
                         pointHoverRadius: 6,
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: '#fff',
                         tension: 0.3
                     }]
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: {display:false}, tooltip: {mode:'index', intersect:false, backgroundColor: '#111', titleColor: '#fff', bodyColor: '#ccc', borderColor: '#333', borderWidth: 1} },
+                    plugins: { legend: {display:false}, tooltip: {mode:'index', intersect:false, backgroundColor: '#111', titleColor: '#fff', bodyColor: '#ccc', borderColor: '#333', borderWidth: 1, titleFont: {family: "'JetBrains Mono', monospace"}, bodyFont: {family: "'JetBrains Mono', monospace"}} },
                     scales: { x: {grid:{display:false}}, y: {border:{display:false}, grid:{color:'#1a1a1a'}} },
                     interaction: { mode: 'nearest', axis: 'x', intersect: false }
                 }
@@ -980,13 +990,13 @@
                     <td class="py-4 px-5 text-left font-mono text-xs text-blue-400 font-bold hover:underline tracking-wide">${t.trade_id}</td>
                     <td class="py-4 px-5 text-left text-xs text-gray-400 font-mono">${t.date}</td>
                     <td class="py-4 px-5 text-left text-sm font-bold text-gray-200">${t.symbol}</td>
-                    <td class="py-4 px-5 text-left hide-mobile"><span class="process-tag ${t.side?.toLowerCase().includes('long')?'tag-green':'tag-red'}">${t.side}</span></td>
+                    <td class="py-4 px-5 text-left hide-mobile"><span class="badge ${t.side?.toLowerCase().includes('long')?'badge-green':'badge-red'}">${t.side}</span></td>
                     <td class="py-4 px-5 text-left hide-mobile text-xs text-gray-400 font-mono">${parseFloat(t.entry_price).toFixed(2)}</td>
                     <td class="py-4 px-5 text-left hide-mobile text-xs text-gray-400 font-mono">${parseFloat(t.exit_price).toFixed(2)}</td>
                     <td class="py-4 px-5 text-right text-sm font-bold font-mono ${pnl>=0?'text-green-400':'text-red-400'}">${formatMoney(pnl)}</td>
                     <td class="py-4 px-5 text-right hide-mobile text-xs text-gray-500 font-mono">$${balance.toFixed(2)}</td>
                     <td class="py-4 px-5 text-center" onclick="event.stopPropagation()">
-                        ${full ? `<div class="screenshot-link" onclick="openTradeModal('${t.trade_id}')"><span class="bg-[#333] px-2 py-1 rounded text-xs text-gray-300 hover:bg-white hover:text-black transition-colors cursor-pointer">IMG</span></div>` : '<span class="text-gray-700 text-xs">-</span>'}
+                        ${full ? `<div class="screenshot-link" onclick="openTradeModal('${t.trade_id}')"><span class="badge badge-gray cursor-pointer hover:bg-white hover:text-black transition-colors">IMG</span></div>` : '<span class="text-gray-700 text-xs">-</span>'}
                     </td>
                 </tr>`;
             }).join('');
@@ -997,7 +1007,7 @@
             currentPage = page;
         }
 
-        // --- REVIEW MODAL LOGIC ---
+        // --- NEW: REVIEW MODAL LOGIC ---
         function openReviewModal(id) {
             const idx = allReviews.findIndex(r => r.review_id === id);
             if(idx === -1) return;
@@ -1016,7 +1026,7 @@
             const pnl = parseMoneyValue(r.net_pl);
             const pnlEl = document.getElementById('r_pnl');
             pnlEl.textContent = formatMoney(pnl);
-            pnlEl.className = `text-2xl font-bold mt-1 font-mono ${pnl >= 0 ? 'text-green-400' : 'text-red-400'}`;
+            pnlEl.className = `text-2xl font-bold mt-1 font-mono ${pnl >= 0 ? 'text-green-400 text-glow-green' : 'text-red-400 text-glow-red'}`;
 
             document.getElementById('r_wr').textContent = (r.win_rate || '0') + '%';
             document.getElementById('r_score').textContent = r.avg_score || '-';
@@ -1110,13 +1120,12 @@
             if(full){ img.src=full; img.classList.remove('hidden'); no.classList.add('hidden'); lnk.href=full; lnk.classList.remove('opacity-0'); }
             else { img.classList.add('hidden'); no.classList.remove('hidden'); lnk.classList.add('opacity-0'); }
 
-            // FIX: Corrected class names here to match CSS
             const setTag = (id,v) => {
                 const el=document.getElementById(id);
                 el.textContent=v||'-';
-                let style = 'process-tag tag-gray';
-                if(v?.match(/follow|complete/i)) style = 'process-tag tag-green';
-                if(v?.match(/fail|no|impulse|error|tilt/i)) style = 'process-tag tag-red';
+                let style = 'badge badge-gray';
+                if(v?.match(/follow|complete/i)) style = 'badge badge-green';
+                if(v?.match(/fail|no|impulse|error|tilt/i)) style = 'badge badge-red';
                 el.className=style;
             };
             setTag('m_tag_pre', t.pre_trade);
