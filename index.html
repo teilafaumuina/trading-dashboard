@@ -20,48 +20,13 @@
         
         /* Calendar Grid */
         .calendar-grid-8 { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; min-width: 700px; }
-        /* Allow overflow visible so tooltips don't get clipped vertically, but handle horizontal scroll */
-        .calendar-scroll-wrapper { overflow-x: auto; overflow-y: visible; -webkit-overflow-scrolling: touch; padding-bottom: 50px; margin-bottom: -40px; } 
+        .calendar-scroll-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 10px; }
 
         /* Calendar Styling */
-        .calendar-day { position: relative; transition: all 0.2s ease; cursor: pointer; border: 1px solid #2a2a2a; z-index: 1; }
-        .calendar-day:hover { z-index: 50 !important; transform: scale(1.02); border-color: #555; } /* High Z-Index on hover is key */
+        .calendar-day { position: relative; transition: all 0.2s ease; border: 1px solid #2a2a2a; }
+        .calendar-day.has-trades:hover { transform: scale(1.02); border-color: #555; cursor: pointer; z-index: 10; }
         .current-day { box-shadow: 0 0 0 2px #3b82f6; z-index: 5; }
         .week-total { position: relative; transition: all 0.2s ease; border: 1px solid #2a2a2a; opacity: 0.9; }
-
-        /* Updated Tooltip Styling */
-        .calendar-tooltip { 
-            position: absolute; 
-            bottom: 110%; 
-            background: #111; 
-            border: 1px solid #444; 
-            border-radius: 8px; 
-            visibility: hidden; 
-            opacity: 0; 
-            transition: all 0.15s ease-out; 
-            width: max-content; 
-            min-width: 200px; 
-            max-width: 260px; /* Prevent being too wide on mobile */
-            z-index: 100; 
-            box-shadow: 0 10px 40px rgba(0,0,0,1); 
-            pointer-events: none;
-            transform-origin: bottom center;
-        }
-        
-        .calendar-day:hover .calendar-tooltip { visibility: visible; opacity: 1; pointer-events: auto; transform: translateY(-5px); }
-
-        /* Smart Alignment Classes */
-        .tooltip-center { left: 50%; transform: translateX(-50%); }
-        .calendar-day:hover .tooltip-center { transform: translateX(-50%) translateY(-5px); }
-
-        .tooltip-left { left: 0; transform: translateX(0); }
-        .calendar-day:hover .tooltip-left { transform: translateY(-5px); }
-
-        .tooltip-right { right: 0; left: auto; transform: translateX(0); }
-        .calendar-day:hover .tooltip-right { transform: translateY(-5px); }
-
-        .tooltip-header { background: #1a1a1a; padding: 10px 12px; font-weight: 600; border-bottom: 1px solid #333; border-radius: 8px 8px 0 0; font-size: 0.75rem; display: flex; justify-content: space-between; align-items: center; }
-        .tooltip-body { padding: 4px; max-height: 250px; overflow-y: auto; }
 
         /* UI Components */
         .metric-card { background: linear-gradient(145deg, #161616 0%, #0f0f0f 100%); border: 1px solid #2a2a2a; transition: transform 0.2s; }
@@ -70,12 +35,16 @@
         @media (min-width: 768px) { .chart-container-lg { height: 350px; } }
         .trade-row:hover { background: rgba(255,255,255,0.03); cursor: pointer; }
         
-        /* Modal */
-        .modal-overlay { background-color: rgba(0, 0, 0, 0.95); backdrop-filter: blur(4px); }
+        /* Modal Overlay */
+        .modal-overlay { background-color: rgba(0, 0, 0, 0.85); backdrop-filter: blur(4px); }
+        
+        /* Nav Arrows */
         .nav-arrow { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(20,20,20,0.8); border: 1px solid #333; color: #fff; width: 50px; height: 50px; border-radius: 50%; font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; z-index: 60; }
         .nav-arrow:hover { background: #10b981; border-color: #10b981; }
         .nav-arrow.left { left: 24px; }
         .nav-arrow.right { right: 24px; }
+        
+        /* Process Tags */
         .process-tag { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; display: inline-block; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
         .tag-green { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
         .tag-red { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
@@ -105,13 +74,30 @@
 </head>
 <body class="bg-[#0a0a0a] text-white overflow-x-hidden">
 
-    <!-- ════════ TRADE MODAL ════════ -->
-    <div id="tradeModal" class="hidden fixed inset-0 z-[999] modal-overlay flex flex-col items-center justify-center p-0 lg:p-6">
-        <button onclick="closeModal('tradeModal')" class="lg:hidden absolute top-4 right-4 z-[1000] text-white bg-black/50 rounded-full w-10 h-10 flex items-center justify-center text-2xl">&times;</button>
-        <button onclick="navigateTrade(-1)" class="nav-arrow left hidden lg:flex">❮</button>
-        <button onclick="navigateTrade(1)" class="nav-arrow right hidden lg:flex">❯</button>
+    <!-- ════════ DAY LIST MODAL ════════ -->
+    <div id="dayModal" class="hidden fixed inset-0 z-[990] modal-overlay flex items-center justify-center p-4" onclick="closeModal('dayModal')">
+        <!-- Stop propagation ensures clicking inside the box doesn't close it -->
+        <div onclick="event.stopPropagation()" class="bg-[#111] border border-[#333] w-full max-w-sm md:max-w-md rounded-xl overflow-hidden shadow-2xl relative z-[991] flex flex-col max-h-[70vh]">
+            <div class="flex justify-between items-center px-5 py-4 border-b border-[#333] bg-[#161616]">
+                <div>
+                    <h2 id="d_date" class="text-lg font-bold text-white leading-tight">--</h2>
+                    <div id="d_pnl" class="text-sm font-bold mt-1">--</div>
+                </div>
+                <button onclick="closeModal('dayModal')" class="bg-[#222] text-gray-400 hover:text-white w-8 h-8 rounded-full flex items-center justify-center">&times;</button>
+            </div>
+            <div id="d_tradeList" class="p-2 overflow-y-auto space-y-1 flex-1">
+                <!-- Javascript injects trades here -->
+            </div>
+        </div>
+    </div>
 
-        <div class="bg-[#111] border-0 lg:border border-[#333] w-full max-w-[1400px] h-full lg:h-[90vh] lg:rounded-xl overflow-hidden flex flex-col shadow-2xl relative z-50">
+    <!-- ════════ TRADE DETAILS MODAL ════════ -->
+    <div id="tradeModal" class="hidden fixed inset-0 z-[1000] modal-overlay flex flex-col items-center justify-center p-0 lg:p-6" onclick="closeModal('tradeModal')">
+        <button onclick="event.stopPropagation(); closeModal('tradeModal')" class="lg:hidden absolute top-4 right-4 z-[1001] text-white bg-black/50 rounded-full w-10 h-10 flex items-center justify-center text-2xl">&times;</button>
+        <button onclick="event.stopPropagation(); navigateTrade(-1)" class="nav-arrow left hidden lg:flex">❮</button>
+        <button onclick="event.stopPropagation(); navigateTrade(1)" class="nav-arrow right hidden lg:flex">❯</button>
+
+        <div onclick="event.stopPropagation()" class="bg-[#111] border-0 lg:border border-[#333] w-full max-w-[1400px] h-full lg:h-[90vh] lg:rounded-xl overflow-hidden flex flex-col shadow-2xl relative z-[1001]">
             <!-- Desktop Header -->
             <div class="hidden lg:flex justify-between items-center px-6 py-4 border-b border-[#333] bg-[#161616]">
                 <div class="flex items-center gap-6">
@@ -172,19 +158,19 @@
             </div>
             
             <div class="lg:hidden absolute bottom-6 left-0 right-0 flex justify-center gap-4 z-50 pointer-events-none">
-                <button onclick="navigateTrade(-1)" class="pointer-events-auto bg-[#222] border border-[#444] w-12 h-12 rounded-full text-white flex items-center justify-center shadow-xl">❮</button>
-                <button onclick="navigateTrade(1)" class="pointer-events-auto bg-[#222] border border-[#444] w-12 h-12 rounded-full text-white flex items-center justify-center shadow-xl">❯</button>
+                <button onclick="event.stopPropagation(); navigateTrade(-1)" class="pointer-events-auto bg-[#222] border border-[#444] w-12 h-12 rounded-full text-white flex items-center justify-center shadow-xl">❮</button>
+                <button onclick="event.stopPropagation(); navigateTrade(1)" class="pointer-events-auto bg-[#222] border border-[#444] w-12 h-12 rounded-full text-white flex items-center justify-center shadow-xl">❯</button>
             </div>
         </div>
     </div>
 
     <!-- ════════ REVIEW MODAL ════════ -->
-    <div id="reviewModal" class="hidden fixed inset-0 z-[999] modal-overlay flex flex-col items-center justify-center p-0 lg:p-6">
-        <button onclick="closeModal('reviewModal')" class="lg:hidden absolute top-4 right-4 z-[1000] text-white bg-black/50 rounded-full w-10 h-10 flex items-center justify-center text-2xl">&times;</button>
-        <button onclick="navigateReview(-1)" class="nav-arrow left hidden lg:flex">❮</button>
-        <button onclick="navigateReview(1)" class="nav-arrow right hidden lg:flex">❯</button>
+    <div id="reviewModal" class="hidden fixed inset-0 z-[1000] modal-overlay flex flex-col items-center justify-center p-0 lg:p-6" onclick="closeModal('reviewModal')">
+        <button onclick="event.stopPropagation(); closeModal('reviewModal')" class="lg:hidden absolute top-4 right-4 z-[1001] text-white bg-black/50 rounded-full w-10 h-10 flex items-center justify-center text-2xl">&times;</button>
+        <button onclick="event.stopPropagation(); navigateReview(-1)" class="nav-arrow left hidden lg:flex">❮</button>
+        <button onclick="event.stopPropagation(); navigateReview(1)" class="nav-arrow right hidden lg:flex">❯</button>
 
-        <div class="bg-[#111] border-0 lg:border border-[#333] w-full max-w-[1200px] h-full lg:h-[85vh] lg:rounded-xl overflow-hidden flex flex-col shadow-2xl relative z-50">
+        <div onclick="event.stopPropagation()" class="bg-[#111] border-0 lg:border border-[#333] w-full max-w-[1200px] h-full lg:h-[85vh] lg:rounded-xl overflow-hidden flex flex-col shadow-2xl relative z-[1001]">
             <!-- Header -->
             <div class="flex justify-between items-center px-6 py-4 border-b border-[#333] bg-[#161616]">
                 <div>
@@ -237,8 +223,8 @@
 
             <!-- Mobile Navigation -->
             <div class="lg:hidden absolute bottom-6 left-0 right-0 flex justify-center gap-4 z-50 pointer-events-none">
-                <button onclick="navigateReview(-1)" class="pointer-events-auto bg-[#222] border border-[#444] w-12 h-12 rounded-full text-white flex items-center justify-center shadow-xl">❮</button>
-                <button onclick="navigateReview(1)" class="pointer-events-auto bg-[#222] border border-[#444] w-12 h-12 rounded-full text-white flex items-center justify-center shadow-xl">❯</button>
+                <button onclick="event.stopPropagation(); navigateReview(-1)" class="pointer-events-auto bg-[#222] border border-[#444] w-12 h-12 rounded-full text-white flex items-center justify-center shadow-xl">❮</button>
+                <button onclick="event.stopPropagation(); navigateReview(1)" class="pointer-events-auto bg-[#222] border border-[#444] w-12 h-12 rounded-full text-white flex items-center justify-center shadow-xl">❯</button>
             </div>
         </div>
     </div>
@@ -717,32 +703,17 @@
 
                 const isToday = isCurrentMonth && d === currentDay ? 'current-day' : '';
                 
-                // --- SMART TOOLTIP POSITIONING LOGIC ---
-                // Grid is 8 columns wide (offset + d - 1) % 8 = column index (0-7)
-                // 0=Mon, 1=Tue... 6=Sun, 7=Total
-                const colIndex = (offset + d - 1) % 8;
-                let tooltipClass = 'tooltip-center';
-                if(colIndex <= 1) tooltipClass = 'tooltip-left';
-                else if(colIndex >= 6) tooltipClass = 'tooltip-right';
-
-                let tooltip = '';
-                if(dayTrades.length) {
-                    tooltip = `<div class="calendar-tooltip ${tooltipClass}">
-                        <div class="tooltip-header flex justify-between"><span>${dateStr}</span><span>${formatMoney(dayPnL)}</span></div>
-                        <div class="tooltip-body space-y-1">`;
-                    dayTrades.forEach(t => {
-                        const tp = getNetPnL(t); // Net
-                        tooltip += `<div onclick="event.stopPropagation(); openTradeModal('${t.trade_id}')" class="flex justify-between hover:bg-[#333] p-1.5 rounded cursor-pointer text-xs">
-                            <span class="font-bold text-gray-300">${t.symbol}</span><span class="${tp>=0?'text-green-400':'text-red-400'}">${formatMoney(tp)}</span>
-                        </div>`;
-                    });
-                    tooltip += `</div></div>`;
+                // --- CLICKABLE DAY LOGIC (NO TOOLTIP) ---
+                let clickAttr = '';
+                let hoverClass = '';
+                if(dayTrades.length > 0) {
+                    clickAttr = `onclick="openDayModal('${dateStr}')"`;
+                    hoverClass = 'has-trades';
                 }
 
-                html += `<div class="calendar-day h-14 md:h-20 rounded-lg ${border} ${bg} ${isToday} flex flex-col items-center justify-center relative group">
+                html += `<div ${clickAttr} class="calendar-day ${hoverClass} h-14 md:h-20 rounded-lg ${border} ${bg} ${isToday} flex flex-col items-center justify-center relative group">
                     <span class="text-[10px] md:text-xs font-bold text-gray-500 absolute top-1 right-2">${d}</span>
                     ${dayTrades.length ? `<span class="text-xs md:text-sm font-bold ${txt}">${formatMoney(dayPnL)}</span><span class="text-[9px] md:text-[10px] text-gray-500 hide-mobile">${dayTrades.length}t</span>` : ''}
-                    ${tooltip}
                 </div>`;
 
                 const dayOfWeek = new Date(calYear, calMonth, d).getDay();
@@ -764,6 +735,42 @@
                 }
             }
             document.getElementById('calendarGrid').innerHTML = html;
+        }
+
+        // --- NEW DAY MODAL LOGIC ---
+        function openDayModal(dateStr) {
+            const trades = rawData.trades.filter(t => t.date === dateStr);
+            if(trades.length === 0) return;
+
+            const total = trades.reduce((s,t) => s + getNetPnL(t), 0);
+            
+            // Format Date header
+            const dateObj = new Date(dateStr);
+            const dateFmt = dateObj.toLocaleDateString('en-US', {weekday:'long', month:'short', day:'numeric'});
+            document.getElementById('d_date').textContent = dateFmt;
+            
+            const pnlEl = document.getElementById('d_pnl');
+            pnlEl.textContent = (total >= 0 ? 'Day Total: +' : 'Day Total: ') + formatMoney(total).replace(/[+-]/,''); // Clean format
+            pnlEl.className = `text-sm font-bold ${total>=0?'text-green-400':'text-red-400'}`;
+
+            // Build List
+            const html = trades.map(t => {
+                const pnl = getNetPnL(t);
+                const isWin = pnl >= 0;
+                return `<div onclick="openTradeModal('${t.trade_id}')" class="flex justify-between items-center p-3 hover:bg-[#222] rounded cursor-pointer border border-transparent hover:border-[#333] transition-colors mb-1">
+                    <div class="flex items-center gap-3">
+                        <span class="font-mono text-xs text-gray-500 w-10">${t.entry_time.substring(0,5)}</span>
+                        <div>
+                            <div class="font-bold text-sm text-gray-200">${t.symbol}</div>
+                            <div class="text-[10px] uppercase text-gray-500">${t.side}</div>
+                        </div>
+                    </div>
+                    <span class="font-bold text-sm ${isWin?'text-green-400':'text-red-400'}">${formatMoney(pnl)}</span>
+                </div>`;
+            }).join('');
+
+            document.getElementById('d_tradeList').innerHTML = html;
+            openModal('dayModal');
         }
 
         window.changeCalendarMonth = (d) => {
@@ -916,8 +923,16 @@
 
         function closeModal(modalId) {
             document.getElementById(modalId).classList.add('hidden');
-            document.body.style.overflow = '';
-            activeModalId = null;
+            // Only re-enable scrolling if no other modals are open
+            if(!document.querySelector('.modal-overlay:not(.hidden)')) {
+                document.body.style.overflow = '';
+                activeModalId = null;
+            } else {
+                // If closing trade modal but day modal is still open below
+                if(modalId === 'tradeModal' && !document.getElementById('dayModal').classList.contains('hidden')) {
+                    activeModalId = 'dayModal';
+                }
+            }
         }
 
         function navigateTrade(d) {
@@ -1007,6 +1022,8 @@
                 if(e.key==='ArrowLeft')navigateReview(-1);
                 if(e.key==='ArrowRight')navigateReview(1);
                 if(e.key==='Escape')closeModal('reviewModal');
+            } else if(activeModalId === 'dayModal') {
+                if(e.key==='Escape')closeModal('dayModal');
             } else {
                 if(e.key.toLowerCase()==='r') location.reload();
             }
