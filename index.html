@@ -31,7 +31,6 @@
         body { 
             margin: 0; 
             background-color: var(--bg-deep); 
-            /* Subtle spotlight effect from top center */
             background-image: radial-gradient(circle at 50% 0%, #1a1a1a 0%, #050505 60%);
             background-attachment: fixed;
             color: #e5e7eb; 
@@ -61,7 +60,6 @@
             overflow: hidden;
             transition: border-color 0.3s ease, transform 0.3s ease;
         }
-        /* Subtle top highlight to simulate light source */
         .tech-card::before {
             content: '';
             position: absolute;
@@ -94,13 +92,9 @@
         }
         @media (min-width: 768px) { .calendar-day { min-height: 90px; } }
         
-        .calendar-day.has-trades {
-            background: linear-gradient(145deg, #131313 0%, #0e0e0e 100%);
-            border-color: #222;
-        }
         .calendar-day.has-trades:hover { 
             transform: scale(1.05); 
-            border-color: #444; 
+            border-color: #555; 
             z-index: 10; 
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
             cursor: pointer;
@@ -188,9 +182,7 @@
                 </div>
                 <button onclick="closeModal('dayModal')" class="bg-[#1a1a1a] text-gray-400 hover:text-white w-8 h-8 rounded-full flex items-center justify-center transition-colors border border-[#333]">&times;</button>
             </div>
-            <div id="d_tradeList" class="p-2 overflow-y-auto space-y-1 flex-1 bg-[#050505]/50">
-                <!-- Javascript injects trades here -->
-            </div>
+            <div id="d_tradeList" class="p-2 overflow-y-auto space-y-1 flex-1 bg-[#050505]/50"></div>
         </div>
     </div>
 
@@ -280,7 +272,6 @@
         <button onclick="event.stopPropagation(); navigateReview(1)" class="nav-arrow right hidden lg:flex">❯</button>
 
         <div onclick="event.stopPropagation()" class="glass-panel w-full max-w-[1200px] h-full lg:h-[85vh] lg:rounded-2xl overflow-hidden flex flex-col shadow-2xl relative z-[1001]">
-            <!-- Header -->
             <div class="flex justify-between items-center px-8 py-5 border-b border-[#222] bg-[#0f0f0f]">
                 <div>
                     <span id="r_type" class="text-[10px] font-bold text-blue-400 uppercase tracking-widest border border-blue-900/40 bg-blue-500/10 px-2 py-1 rounded">--</span>
@@ -289,7 +280,6 @@
                 <button onclick="closeModal('reviewModal')" class="text-gray-600 hover:text-white text-4xl leading-none transition-colors hidden lg:block">&times;</button>
             </div>
 
-            <!-- Stats Bar -->
             <div class="grid grid-cols-2 md:grid-cols-4 border-b border-[#222] bg-[#111]">
                 <div class="p-5 border-r border-[#222]">
                     <span class="text-[10px] uppercase text-gray-500 font-bold tracking-widest">Net P&L</span>
@@ -309,9 +299,7 @@
                 </div>
             </div>
 
-            <!-- Content Area -->
             <div class="flex-1 overflow-hidden flex flex-col lg:flex-row bg-[#0a0a0a]">
-                <!-- AI Insight -->
                 <div class="w-full lg:w-1/2 p-8 overflow-y-auto border-b lg:border-b-0 lg:border-r border-[#222]">
                     <div class="flex items-center gap-3 mb-6 pb-4 border-b border-[#222]">
                         <span class="text-2xl">🤖</span>
@@ -319,8 +307,6 @@
                     </div>
                     <div id="r_ai_insight" class="prose-custom">--</div>
                 </div>
-                
-                <!-- User Reflection -->
                 <div class="w-full lg:w-1/2 p-8 overflow-y-auto bg-[#0d0d0d]">
                     <div class="flex items-center gap-3 mb-6 pb-4 border-b border-[#222]">
                         <span class="text-2xl">🧠</span>
@@ -815,8 +801,9 @@
 
                 let bg = 'bg-[#0e0e0e]', border='border-[#1a1a1a]', txt='text-gray-600';
                 if(dayTrades.length) {
-                    bg = dayPnL>=0 ? 'bg-gradient-to-br from-[#0a1a10] to-[#0e0e0e]' : 'bg-gradient-to-br from-[#1a0a0a] to-[#0e0e0e]';
-                    border = dayPnL>=0 ? 'border-green-900/30' : 'border-red-900/30';
+                    // RESTORED: STRONGER BACKGROUND COLORS FOR CALENDAR
+                    bg = dayPnL>=0 ? 'bg-[rgba(16,185,129,0.15)]' : 'bg-[rgba(244,63,94,0.15)]';
+                    border = dayPnL>=0 ? 'border-green-500/30' : 'border-red-500/30';
                     txt = dayPnL>=0 ? 'text-green-400 text-glow-green' : 'text-red-400 text-glow-red';
                 }
 
@@ -902,10 +889,8 @@
             Chart.defaults.font.family = "'JetBrains Mono', monospace";
             
             const ctx = document.getElementById('equityChart').getContext('2d');
-            const eqGradient = ctx.createLinearGradient(0, 0, 0, 400);
-            eqGradient.addColorStop(0, 'rgba(16, 185, 129, 0.2)');
-            eqGradient.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
-
+            
+            // RESTORED: DUAL-COLOR EQUITY LOGIC
             equityChart = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -913,14 +898,20 @@
                     datasets:[{
                         label:'Net Equity',
                         data:[],
-                        fill: true,
-                        backgroundColor: eqGradient,
-                        borderColor: '#10b981',
+                        fill: {
+                            target: { value: rawData.startingBalance },
+                            above: 'rgba(16, 185, 129, 0.15)',
+                            below: 'rgba(244, 63, 94, 0.15)'
+                        },
+                        segment: {
+                            borderColor: ctx => ctx.p0.parsed.y >= rawData.startingBalance ? '#10b981' : '#f43f5e'
+                        },
                         borderWidth: 2,
                         pointRadius: 0,
                         pointHoverRadius: 6,
-                        pointHoverBackgroundColor: '#10b981',
-                        pointHoverBorderColor: '#fff'
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: '#fff',
+                        tension: 0.3
                     }]
                 },
                 options: {
