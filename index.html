@@ -983,13 +983,38 @@
                     datasets:[{
                         label:'Net Equity',
                         data:[],
+                        // 1. The Fill Logic (Handles the Green/Red Shadow Area)
                         fill: {
                             target: { value: rawData.startingBalance },
-                            above: 'rgba(16, 185, 129, 0.15)',
-                            below: 'rgba(244, 63, 94, 0.15)'
+                            above: 'rgba(16, 185, 129, 0.15)', // Green Shadow
+                            below: 'rgba(244, 63, 94, 0.15)'   // Red Shadow
                         },
-                        segment: {
-                            borderColor: ctx => ctx.p0.parsed.y >= rawData.startingBalance ? '#10b981' : '#f43f5e'
+                        // 2. The Line Color Logic (Uses a Gradient to split exactly at 50k)
+                        borderColor: function(context) {
+                            const chart = context.chart;
+                            const {ctx, chartArea, scales} = chart;
+                            if (!chartArea) return null;
+                            
+                            // Get pixel position of the starting balance (50,000)
+                            const yPos = scales.y.getPixelForValue(rawData.startingBalance);
+                            
+                            // Create a gradient from Top to Bottom
+                            const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                            
+                            // Calculate the stop position (0 to 1) based on where 50k is on screen
+                            // Note: chartArea.bottom is the higher pixel value (lower value on graph)
+                            const stop = (yPos - chartArea.top) / (chartArea.bottom - chartArea.top);
+                            
+                            // Handle cases where the line is fully above or fully below the screen
+                            const clampedStop = Math.max(0, Math.min(1, stop));
+
+                            // Define the hard stop: Green above, Red below
+                            gradient.addColorStop(0, '#10b981');           // Green at Top
+                            gradient.addColorStop(clampedStop, '#10b981'); // Green down to 50k
+                            gradient.addColorStop(clampedStop, '#f43f5e'); // Switch to Red instantly
+                            gradient.addColorStop(1, '#f43f5e');           // Red at Bottom
+                            
+                            return gradient;
                         },
                         borderWidth: 2,
                         pointRadius: 0,
@@ -1000,14 +1025,31 @@
                     }]
                 },
                 options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: {display:false}, tooltip: {mode:'index', intersect:false, backgroundColor: '#111', titleColor: '#fff', bodyColor: '#ccc', borderColor: '#333', borderWidth: 1, titleFont: {family: "'JetBrains Mono', monospace"}, bodyFont: {family: "'JetBrains Mono', monospace"}} },
-                    scales: { x: {grid:{display:false}}, y: {border:{display:false}, grid:{color:'#1a1a1a'}} },
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: {display:false}, 
+                        tooltip: {
+                            mode:'index', 
+                            intersect:false, 
+                            backgroundColor: '#111', 
+                            titleColor: '#fff', 
+                            bodyColor: '#ccc', 
+                            borderColor: '#333', 
+                            borderWidth: 1
+                        } 
+                    },
+                    scales: { 
+                        x: { grid:{display:false} }, 
+                        y: { border:{display:false}, grid:{color:'#1a1a1a'} } 
+                    },
                     interaction: { mode: 'nearest', axis: 'x', intersect: false }
                 }
             });
+            
             switchEquityView('trades');
 
+            // --- OTHER CHARTS (Unchanged) ---
             const sortedHours = Object.keys(rawData.hours).sort();
             new Chart(document.getElementById('timeAnalysisChart'), {
                 type: 'bar',
