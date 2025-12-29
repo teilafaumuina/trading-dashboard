@@ -51,44 +51,16 @@
         
         /* ════ COMPONENT STYLING ════ */
         
-        /* Tech Card (Enhanced with Spotlight) */
+        /* Tech Card */
         .tech-card {
-            background: radial-gradient(
-                800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), 
-                rgba(255, 255, 255, 0.04), 
-                transparent 40%
-            ), linear-gradient(180deg, #111 0%, #0a0a0a 100%);
-            border: 1px solid var(--border-subtle);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            position: relative;
-            overflow: hidden;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            z-index: 1;
+            background: linear-gradient(145deg, #161616 0%, #0f0f0f 100%);
+            border: 1px solid #2a2a2a;
+            transition: transform 0.2s;
         }
-
-        /* Glowing Border Effect */
-        .tech-card::before {
-            content: "";
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            border-radius: inherit;
-            padding: 1px;
-            background: radial-gradient(
-                600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), 
-                rgba(255, 255, 255, 0.3), 
-                transparent 40%
-            );
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
-            opacity: 0;
-            transition: opacity 0.5s ease;
-            pointer-events: none;
-            z-index: 2;
+        .tech-card:hover {
+            border-color: #444;
+            transform: translateY(-2px);
         }
-
-        .tech-card:hover::before { opacity: 1; }
-        .tech-card:hover { transform: translateY(-2px); box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.5); }
 
         /* Charts */
         .chart-container-lg { height: 280px; width: 100%; position: relative; }
@@ -122,10 +94,10 @@
         .trade-row:hover { background-color: rgba(255,255,255,0.03); cursor: pointer; }
         .table-header { font-size: 0.7rem; letter-spacing: 0.05em; color: #6b7280; font-weight: 600; text-transform: uppercase; }
 
-        /* Badges */
+        /* Tags */
         .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.025em; text-transform: uppercase; border: 1px solid transparent; }
-        .badge-green { background: rgba(16, 185, 129, 0.1); color: #34d399; border-color: rgba(16, 185, 129, 0.2); box-shadow: 0 0 10px rgba(16, 185, 129, 0.05); }
-        .badge-red { background: rgba(244, 63, 94, 0.1); color: #fb7185; border-color: rgba(244, 63, 94, 0.2); box-shadow: 0 0 10px rgba(244, 63, 94, 0.05); }
+        .badge-green { background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.2); box-shadow: 0 0 10px rgba(16, 185, 129, 0.05); }
+        .badge-red { background: rgba(244, 63, 94, 0.15); color: #fb7185; border-color: rgba(244, 63, 94, 0.2); box-shadow: 0 0 10px rgba(244, 63, 94, 0.05); }
         .badge-gray { background: rgba(255, 255, 255, 0.05); color: #9ca3af; border-color: rgba(255, 255, 255, 0.1); }
 
         /* Modal Styles */
@@ -176,17 +148,6 @@
         .btn-tech.active { background: #222; border-color: var(--accent-green); color: var(--accent-green); box-shadow: 0 0 10px rgba(16, 185, 129, 0.1); }
         .btn-tech:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        /* ════ ANIMATIONS ════ */
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .animate-enter {
-            opacity: 0; /* Hidden by default */
-            animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-
         /* Mobile Overrides */
         @media (max-width: 1024px) {
             .nav-arrow { bottom: 20px; top: auto; transform: none; }
@@ -194,10 +155,15 @@
             .nav-arrow.right { right: 20px; }
             .hide-mobile { display: none; }
             table { min-width: 650px; }
+            
+            /* Modal Mobile Logic: Full Screen */
             .glass-panel {
-                width: 100% !important; height: 100% !important;
-                max-width: 100% !important; max-height: 100% !important;
-                border-radius: 0 !important; border: none !important;
+                width: 100% !important;
+                height: 100% !important;
+                max-width: 100% !important;
+                max-height: 100% !important;
+                border-radius: 0 !important;
+                border: none !important;
             }
         }
     </style>
@@ -228,9 +194,15 @@
             <div class="sticky top-0 z-50 flex justify-between items-center px-6 py-4 lg:px-8 lg:py-5 border-b border-[#222] bg-[#0f0f0f] backdrop-blur-md">
                 <div class="flex items-center gap-4 lg:gap-8">
                     <div>
-                        <h2 id="m_tradeId" class="text-2xl lg:text-3xl font-bold font-mono text-white tracking-tight">--</h2>
+                        <!-- Mobile: m_tradeId_mob (Reinstated) -->
+                        <h2 id="m_tradeId" class="hidden lg:block text-2xl lg:text-3xl font-bold font-mono text-white tracking-tight">--</h2>
+                        <h2 id="m_tradeId_mob" class="lg:hidden text-xl font-bold font-mono text-white tracking-tight">--</h2>
+                        
                         <div class="flex items-center gap-2 text-xs text-gray-500 mt-1 font-mono uppercase tracking-wide">
-                            <span id="m_date">--</span> <span class="text-gray-700">•</span> <span id="m_time">--</span>
+                            <!-- Mobile: m_date_mob (Reinstated) -->
+                            <span id="m_date" class="hidden lg:inline">--</span>
+                            <span id="m_date_mob" class="lg:hidden">--</span>
+                            <span class="text-gray-700">•</span> <span id="m_time">--</span>
                         </div>
                     </div>
                     
@@ -244,7 +216,7 @@
                     </div>
                 </div>
                 
-                <!-- Close Button -->
+                <!-- Close Button (Visible All Devices) -->
                 <button onclick="closeModal('tradeModal')" class="bg-[#1a1a1a] text-gray-400 hover:text-white w-10 h-10 rounded-full flex items-center justify-center border border-[#333] transition-all hover:bg-red-500/20 hover:border-red-500/50 hover:text-red-500 text-xl leading-none">&times;</button>
             </div>
 
@@ -254,7 +226,7 @@
                     <img id="m_image" src="" class="max-w-full max-h-full object-contain" alt="Chart">
                     <div id="m_no_image" class="hidden flex flex-col items-center text-gray-700"><span class="text-6xl mb-4 opacity-20">📷</span><span class="font-mono text-sm uppercase tracking-widest">No Screenshot</span></div>
                     
-                    <!-- Open Original Button -->
+                    <!-- Fixed: Subtle Open Original Button Top Right -->
                     <a id="m_full_link" href="#" target="_blank" class="absolute top-4 right-4 bg-black/40 hover:bg-black/80 text-gray-300 hover:text-white border border-white/10 hover:border-white/30 px-3 py-1.5 rounded-full text-[10px] font-bold tracking-wider uppercase transition-all backdrop-blur-sm flex items-center gap-2">
                         <span>Original</span> ↗
                     </a>
@@ -262,7 +234,7 @@
 
                 <!-- Data Area -->
                 <div class="w-full lg:w-1/4 h-[60vh] lg:h-full bg-[#0a0a0a] overflow-y-auto flex flex-col divide-y divide-[#222] pb-20 lg:pb-0">
-                    <!-- Mobile Stats (Visible only on Mobile) -->
+                    <!-- Mobile Stats (Reinstated) -->
                     <div class="lg:hidden p-5 bg-[#111] border-b border-[#222] flex justify-between items-center">
                         <div>
                             <span class="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Net P&L</span>
@@ -388,10 +360,10 @@
         </div>
     </div>
 
-    <div id="mainDashboard" class="hidden min-h-screen p-4 md:p-8 max-w-[1800px] mx-auto" onmousemove="">
+    <div id="mainDashboard" class="hidden min-h-screen p-4 md:p-8 max-w-[1800px] mx-auto">
         <!-- Header -->
         <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-4">
-            <div class="animate-enter delay-1">
+            <div>
                 <h1 class="text-3xl md:text-4xl font-bold flex items-center tracking-tight text-white">
                     Trading Terminal <span class="w-3 h-3 bg-green-500 rounded-full ml-4 shadow-[0_0_15px_rgba(16,185,129,0.6)] animate-pulse"></span>
                 </h1>
@@ -482,6 +454,7 @@
                         <h3 id="lt_pnl" class="text-4xl md:text-5xl font-bold mt-2 font-mono">--</h3>
                         <p id="lt_date" class="text-xs text-gray-500 mt-3 font-mono">--</p>
                     </div>
+                    <!-- FIXED: Added explicit onclick for button -->
                     <button onclick="event.stopPropagation(); openLastTrade()" class="w-full py-3 bg-[#1a1a1a] hover:bg-[#252525] border border-[#333] text-gray-200 rounded font-medium transition-all flex items-center justify-center gap-2 group-hover:border-[#555] group-hover:text-white">Full Journal <span class="text-lg leading-none">→</span></button>
                 </div>
             </div>
@@ -643,21 +616,6 @@
             rawData.weekdays = wkd;
         }
 
-        // --- NEW: SPOTLIGHT EFFECT ---
-        function initSpotlightEffect() {
-            const cards = document.querySelectorAll('.tech-card');
-            document.getElementById('mainDashboard').onmousemove = e => {
-                for(const card of cards) {
-                    const rect = card.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const y = e.clientY - rect.top;
-                    
-                    card.style.setProperty("--mouse-x", `${x}px`);
-                    card.style.setProperty("--mouse-y", `${y}px`);
-                }
-            }
-        }
-
         function initDashboard() {
             document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
             buildMetrics();
@@ -669,29 +627,6 @@
             initCharts();
             renderCalendar();
             displayTrades();
-            
-            // ANIMATIONS
-            initSpotlightEffect();
-            
-            const containers = [
-                document.getElementById('metricsContainer'),
-                document.querySelector('.chart-container-lg')?.parentElement,
-                document.querySelector('.calendar-grid-8')?.parentElement?.parentElement,
-                document.getElementById('evaluationPanel')?.parentElement,
-                document.getElementById('symbolPerformance')?.parentElement,
-                document.getElementById('timeAnalysisChart')?.parentElement?.parentElement,
-                document.getElementById('weekdayChart')?.parentElement?.parentElement,
-                document.getElementById('reviewsContainer')?.parentElement,
-                document.getElementById('lastTradeWidget'),
-                document.querySelector('.table-container')?.parentElement
-            ];
-            
-            containers.forEach((el, index) => {
-                if(el) {
-                    el.classList.add('animate-enter');
-                    el.style.animationDelay = `${index * 100}ms`;
-                }
-            });
         }
 
         // ════ RENDERERS ════
@@ -889,6 +824,7 @@
 
                 let bg = 'bg-[#0e0e0e]', border='border-[#1a1a1a]', txt='text-gray-600';
                 if(dayTrades.length) {
+                    // STRONG COLORS RESTORED
                     bg = dayPnL>=0 ? 'bg-[rgba(16,185,129,0.15)]' : 'bg-[rgba(244,63,94,0.15)]';
                     border = dayPnL>=0 ? 'border-green-500/30' : 'border-red-500/30';
                     txt = dayPnL>=0 ? 'text-green-400 text-glow-green' : 'text-red-400 text-glow-red';
@@ -976,6 +912,7 @@
             
             const ctx = document.getElementById('equityChart').getContext('2d');
             
+            // EQUITY CHART RESTORED TO GREEN/RED SPLIT LOGIC
             equityChart = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -1153,41 +1090,57 @@
             const t = allTrades[currentTradeIndex];
             if(!t) return;
             
-            document.getElementById('m_tradeId').textContent = t.trade_id;
+            // ROBUST SETTING (Mobile Safe)
+            const setText = (id, val) => {
+                const el = document.getElementById(id);
+                if(el) el.textContent = val;
+            };
+
+            setText('m_tradeId', t.trade_id);
+            setText('m_tradeId_mob', t.trade_id); // MOBILE ID
             
-            document.getElementById('m_date').textContent = t.date;
+            setText('m_date', t.date);
+            setText('m_date_mob', t.date); // MOBILE ID
             
-            document.getElementById('m_time').textContent = t.entry_time;
+            setText('m_time', t.entry_time);
             
             const symEl = document.getElementById('m_symbol');
             if(symEl) symEl.textContent = t.symbol;
+            
+            const symMobEl = document.getElementById('m_symbol_mob'); // MOBILE ID
+            if(symMobEl) symMobEl.textContent = t.symbol;
 
-            document.getElementById('m_side').textContent = t.side;
-            document.getElementById('m_side').className = `px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide ${t.side?.toLowerCase().includes('long')?'bg-green-900/30 text-green-300 border border-green-800':'bg-red-900/30 text-red-300 border border-red-800'}`;
+            const sideEl = document.getElementById('m_side');
+            if(sideEl) {
+                sideEl.textContent = t.side;
+                sideEl.className = `px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide ${t.side?.toLowerCase().includes('long')?'bg-green-900/30 text-green-300 border border-green-800':'bg-red-900/30 text-red-300 border border-red-800'}`;
+            }
             
             const pnl = getNetPnL(t); // Net
             const pnlFormatted = formatMoney(pnl);
             
             // Desktop PnL
-            document.getElementById('m_pnl').textContent = pnlFormatted;
-            document.getElementById('m_pnl').className = `text-3xl font-bold leading-none mt-1 font-mono ${pnl>=0?'text-green-400 text-glow-green':'text-red-400 text-glow-red'}`;
-            
-            // Mobile PnL (This ID *does* exist in your HTML, so we keep it)
-            const mobPnl = document.getElementById('m_pnl_mob');
-            if(mobPnl) {
-                mobPnl.textContent = pnlFormatted;
-                mobPnl.className = `text-2xl font-bold font-mono ${pnl>=0?'text-green-400':'text-red-400'}`;
+            const pnlDesk = document.getElementById('m_pnl');
+            if(pnlDesk) {
+                pnlDesk.textContent = pnlFormatted;
+                pnlDesk.className = `text-3xl font-bold leading-none mt-1 font-mono ${pnl>=0?'text-green-400 text-glow-green':'text-red-400 text-glow-red'}`;
             }
             
-            document.getElementById('m_entry_price').textContent = parseFloat(t.entry_price).toFixed(2);
-            document.getElementById('m_exit_price').textContent = parseFloat(t.exit_price).toFixed(2);
-            document.getElementById('m_setup').textContent = t.setup || '-';
-            document.getElementById('m_session').textContent = t.session || '-';
-            document.getElementById('m_score').textContent = t.score || t['Total Score'] || '-';
-            document.getElementById('m_fees').textContent = '-' + formatMoney(Math.abs(parseMoneyValue(t.fees||0)));
-            document.getElementById('m_notes').textContent = t.notes || 'No notes recorded.';
+            // Mobile PnL
+            const pnlMob = document.getElementById('m_pnl_mob');
+            if(pnlMob) {
+                pnlMob.textContent = pnlFormatted;
+                pnlMob.className = `text-2xl font-bold font-mono ${pnl>=0?'text-green-400':'text-red-400'}`;
+            }
+            
+            setText('m_entry_price', parseFloat(t.entry_price).toFixed(2));
+            setText('m_exit_price', parseFloat(t.exit_price).toFixed(2));
+            setText('m_setup', t.setup || '-');
+            setText('m_session', t.session || '-');
+            setText('m_score', t.score || t['Total Score'] || '-');
+            setText('m_fees', '-' + formatMoney(Math.abs(parseMoneyValue(t.fees||0))));
+            setText('m_notes', t.notes || 'No notes recorded.');
 
-            // Image Logic
             const {full} = driveUrls(t.screenshot||t.screenshot_url_A);
             const img=document.getElementById('m_image'), no=document.getElementById('m_no_image'), lnk=document.getElementById('m_full_link');
             if(full){ 
@@ -1202,7 +1155,7 @@
                 lnk.classList.add('opacity-0'); 
             }
 
-            // Tags Logic
+            // Tags Logic (Restored CSS classes)
             const setTag = (id,v) => {
                 const el=document.getElementById(id);
                 if(!el) return;
