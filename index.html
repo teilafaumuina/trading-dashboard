@@ -10,6 +10,10 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     
+    <!-- Zoom & Pan Plugins -->
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+    
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -405,13 +409,19 @@
         <!-- Equity -->
         <div class="tech-card rounded-xl p-6 md:p-8 mb-8">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-lg font-semibold tracking-wide text-gray-200">Net Equity Curve</h2>
+                <h2 class="text-lg font-semibold tracking-wide text-gray-200">
+                    Net Equity Curve
+                    <span class="text-[10px] text-gray-500 ml-3 font-mono font-normal tracking-wide border border-[#333] bg-[#111] px-2 py-0.5 rounded hidden sm:inline-block cursor-help opacity-70" title="Double-click chart to reset view">
+                        SCROLL TO ZOOM • DRAG TO PAN
+                    </span>
+                </h2>
                 <div class="flex space-x-1 bg-[#1a1a1a] p-1 rounded-lg border border-[#333]">
                     <button id="equityByTrades" class="btn-tech active" onclick="switchEquityView('trades')">Trades</button>
                     <button id="equityByDays" class="btn-tech" onclick="switchEquityView('days')">Days</button>
                 </div>
             </div>
-            <div class="chart-container-lg"><canvas id="equityChart"></canvas></div>
+            <!-- Added dblclick listener to easily reset Zoom -->
+            <div class="chart-container-lg" ondblclick="if(equityChart.resetZoom) equityChart.resetZoom()"><canvas id="equityChart"></canvas></div>
         </div>
 
         <!-- Calendar & Evaluation -->
@@ -969,6 +979,52 @@
             renderCalendar();
         }
 
+        // --- NEW CUSTOM PLUGIN: DRAW VERTICAL LINE PER DAY ---
+        const dayDividerPlugin = {
+            id: 'dayDivider',
+            beforeDraw: (chart) => {
+                const { ctx, chartArea } = chart;
+                const dataset = chart.data.datasets[0];
+                const customData = dataset.customData;
+                const pluginOptions = chart.options.plugins.dayDivider;
+                
+                // Only run logic if viewing "Trades", and we have data
+                if (!customData || !pluginOptions || pluginOptions.mode !== 'trades') return;
+                
+                ctx.save();
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)'; // Subtle line
+                ctx.lineWidth = 1;
+                ctx.setLineDash([4, 4]); // Dashed
+                
+                let prevDate = null;
+                const meta = chart.getDatasetMeta(0);
+                
+                for (let i = 0; i < customData.length; i++) {
+                    const currDate = customData[i].date;
+                    // Check if date changed and it's not the 'Start' label
+                    if (currDate !== 'Start' && prevDate && currDate !== prevDate) {
+                        const xPos = meta.data[i].x;
+                        
+                        // Only draw if within current zoomed/scrolled canvas area
+                        if (xPos >= chartArea.left && xPos <= chartArea.right) {
+                            ctx.beginPath();
+                            ctx.moveTo(xPos, chartArea.top);
+                            ctx.lineTo(xPos, chartArea.bottom);
+                            ctx.stroke();
+                            
+                            // Write Date Label at the top
+                            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                            ctx.font = '10px "JetBrains Mono"';
+                            // Format: "YYYY-MM-DD" down to "MM-DD"
+                            ctx.fillText(currDate.substring(5), xPos + 4, chartArea.top + 12);
+                        }
+                    }
+                    if (currDate !== 'Start') prevDate = currDate;
+                }
+                ctx.restore();
+            }
+        };
+
         function initCharts() {
             Chart.defaults.color='#6b7280';
             Chart.defaults.borderColor='#1f1f1f';
@@ -978,6 +1034,7 @@
             
             equityChart = new Chart(ctx, {
                 type: 'line',
+                plugins: [dayDividerPlugin], // Register Custom Divider Line
                 data: {
                     labels:[],
                     datasets:[{
@@ -1029,6 +1086,19 @@
                     maintainAspectRatio: false,
                     plugins: { 
                         legend: {display:false}, 
+                        dayDivider: { mode: 'trades' }, // init state for plugin
+                        // --- ZOOM & PAN LOGIC ---
+                        zoom: {
+                            pan: {
+                                enabled: true,
+                                mode: 'x', // Pan left/right only
+                            },
+                            zoom: {
+                                wheel: { enabled: true, speed: 0.1 }, // Scroll to zoom
+                                pinch: { enabled: true },             // Pinch to zoom (mobile)
+                                mode: 'x'                             // Zoom x-axis only
+                            }
+                        },
                         tooltip: {
                             mode:'index', 
                             intersect:false, 
@@ -1271,16 +1341,17 @@
             displayTrades(1);
         }
 
-        window.changePage = (d) => {
-            const max = Math.ceil(filteredTrades.length/tradesPerPage);
-            const next = currentPage+d;
-            if(next>=1 && next<=max) displayTrades(next);
-        }
-
         window.switchEquityView = (mode) => {
             const d = mode==='days' ? rawData.equityDays : rawData.equityTrades;
             equityChart.data.labels = d.map(x => mode==='days' ? x.date : 'T'+x.trade);
             equityChart.data.datasets[0].data = d.map(x => x.equity);
+            
+            // Pass custom data to plugin & reset zoom on mode change
+            equityChart.options.plugins.dayDivider.mode = mode;
+            equityChart.data.datasets[0].customData = d;
+            
+            if(equityChart.resetZoom) equityChart.resetZoom();
+            
             equityChart.update();
             document.getElementById('equityByTrades').className = mode==='trades'?'btn-tech active':'btn-tech';
             document.getElementById('equityByDays').className = mode==='days'?'btn-tech active':'btn-tech';
