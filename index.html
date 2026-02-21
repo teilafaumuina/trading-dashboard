@@ -11,8 +11,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     
-    <!-- Hammer.js (Kept strictly for Swipe Gestures on Modals) -->
+    <!-- Zoom & Pan Plugins (For Smart Window & Swipes) -->
     <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -56,7 +57,7 @@
         
         /* ════ COMPONENT STYLING ════ */
         
-        /* Tech Card (Enhanced with Spotlight) */
+        /* Tech Card */
         .tech-card {
             background: radial-gradient(
                 800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), 
@@ -71,7 +72,6 @@
             z-index: 1;
         }
 
-        /* Glowing Border Effect */
         .tech-card::before {
             content: "";
             position: absolute;
@@ -91,14 +91,12 @@
             pointer-events: none;
             z-index: 2;
         }
-
         .tech-card:hover::before { opacity: 1; }
         .tech-card:hover { transform: translateY(-2px); box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.5); }
 
         /* Charts */
-        .chart-wrapper { position: relative; width: 100%; height: 280px; }
-        @media (min-width: 768px) { .chart-wrapper { height: 380px; } }
-        .drawdown-wrapper { position: relative; width: 100%; height: 150px; }
+        .chart-container-lg { height: 320px; width: 100%; position: relative; }
+        @media (min-width: 768px) { .chart-container-lg { height: 420px; } }
 
         /* Calendar */
         .calendar-grid-8 { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; min-width: 800px; }
@@ -184,14 +182,14 @@
         .btn-tech.active { background: #222; border-color: var(--accent-green); color: var(--accent-green); box-shadow: 0 0 10px rgba(16, 185, 129, 0.1); }
         .btn-tech:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        /* ════ ANIMATIONS ════ */
+        /* Animations */
         @keyframes fadeInUp {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
         .animate-enter {
-            opacity: 0; /* Hidden by default */
+            opacity: 0; 
             animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
@@ -410,33 +408,33 @@
         <!-- Metrics -->
         <div id="metricsContainer" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8"></div>
 
-        <!-- Equity -->
-        <div class="tech-card rounded-xl p-6 md:p-8 mb-4">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-lg font-semibold tracking-wide text-gray-200">Net Equity Curve</h2>
-                <div class="flex space-x-1 bg-[#1a1a1a] p-1 rounded-lg border border-[#333]">
-                    <button id="equityByTrades" class="btn-tech active" onclick="switchEquityView('trades')">Trades</button>
-                    <button id="equityByDays" class="btn-tech" onclick="switchEquityView('days')">Days</button>
-                </div>
-            </div>
-            <!-- Horizontal Native Scroll Wrapper -->
-            <div class="overflow-x-auto custom-scrollbar pb-2">
-                <div id="equityChartContainer" class="chart-wrapper">
-                    <canvas id="equityChart"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <!-- Drawdown -->
+        <!-- COMBINED EQUITY & DRAWDOWN CHART -->
         <div class="tech-card rounded-xl p-6 md:p-8 mb-8">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-lg font-semibold tracking-wide text-gray-200">Drawdown Profile</h2>
-            </div>
-            <!-- Horizontal Native Scroll Wrapper -->
-            <div class="overflow-x-auto custom-scrollbar pb-2">
-                <div id="drawdownChartContainer" class="drawdown-wrapper">
-                    <canvas id="drawdownChart"></canvas>
+            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
+                <h2 class="text-lg font-semibold tracking-wide text-gray-200">
+                    Performance Profile
+                    <span class="text-[10px] text-gray-500 ml-3 font-mono font-normal tracking-wide border border-[#333] bg-[#111] px-2 py-0.5 rounded hidden sm:inline-block cursor-help opacity-70" title="Double-click chart to reset view">
+                        SCROLL/PINCH TO ZOOM • DRAG TO PAN
+                    </span>
+                </h2>
+                
+                <div class="flex flex-wrap gap-2">
+                    <!-- The Focus Toggle -->
+                    <div class="flex space-x-1 bg-[#1a1a1a] p-1 rounded-lg border border-[#333]">
+                        <button id="focusEquityBtn" class="btn-tech active" onclick="setChartFocus('equity')">Focus: Equity</button>
+                        <button id="focusDrawdownBtn" class="btn-tech" onclick="setChartFocus('drawdown')">Focus: Drawdown</button>
+                    </div>
+                    <!-- The Mode Toggle -->
+                    <div class="flex space-x-1 bg-[#1a1a1a] p-1 rounded-lg border border-[#333]">
+                        <button id="equityByTrades" class="btn-tech active" onclick="switchEquityView('trades')">Trades</button>
+                        <button id="equityByDays" class="btn-tech" onclick="switchEquityView('days')">Days</button>
+                    </div>
                 </div>
+            </div>
+            
+            <!-- Chart Container (Double click runs our smart window reset) -->
+            <div class="chart-container-lg" ondblclick="if(combinedChart.resetZoom) { switchEquityView(document.getElementById('equityByDays').classList.contains('active') ? 'days' : 'trades'); }">
+                <canvas id="combinedChart"></canvas>
             </div>
         </div>
 
@@ -575,8 +573,9 @@
         // ════ STATE ════
         let rawData = {}, allTrades = [], filteredTrades = [], allReviews = [];
         let currentPage = 1, tradesPerPage = 15;
-        let equityChart, drawdownChart, timeChart, symbolChart, weekdayChart;
+        let combinedChart, timeChart, symbolChart, weekdayChart;
         let activeModalId = null, currentTradeIndex = -1, currentReviewIndex = -1;
+        let chartFocus = 'equity'; // Tracks focus state ('equity' or 'drawdown')
 
         // ════ UTILS ════
         const formatMoney = (v) => (parseFloat(v)||0)>=0 ? '+$'+Math.abs(v).toFixed(2) : '-$'+Math.abs(v).toFixed(2);
@@ -604,8 +603,6 @@
             return { thumb:url, full:url };
         };
 
-        // Determine Session dynamically based on entry_time (CET/CEST - Sweden localized logic)
-        // London: 09:00 - 15:29 | New York: 15:30 - 22:00 | Asian / Overnight: Before 09:00 or after 22:00
         const determineSession = (entryTime) => {
             if (!entryTime) return '-';
             const parts = entryTime.split(':');
@@ -618,7 +615,7 @@
             
             if (totalMins >= 930 && totalMins < 1320) return 'New York'; // 15:30 to 22:00
             if (totalMins >= 540 && totalMins < 930) return 'London'; // 09:00 to 15:29
-            return 'Asian / Overnight'; // Anything else
+            return 'Asian / Overnight'; 
         };
 
         // ════ INIT ════
@@ -1030,7 +1027,6 @@
             document.getElementById('calendarGrid').innerHTML = html;
         }
 
-        // --- DAY MODAL LOGIC ---
         function openDayModal(dateStr) {
             const trades = rawData.trades.filter(t => t.date === dateStr);
             if(trades.length === 0) return;
@@ -1080,20 +1076,18 @@
                 const customData = dataset.customData;
                 const pluginOptions = chart.options.plugins.dayDivider;
                 
-                // Only run logic if viewing "Trades", and we have data
                 if (!customData || !pluginOptions || pluginOptions.mode !== 'trades') return;
                 
                 ctx.save();
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)'; // Subtle line
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)'; 
                 ctx.lineWidth = 1;
-                ctx.setLineDash([4, 4]); // Dashed
+                ctx.setLineDash([4, 4]); 
                 
                 let prevDate = null;
                 const meta = chart.getDatasetMeta(0);
                 
                 for (let i = 0; i < customData.length; i++) {
                     const currDate = customData[i].date;
-                    // Check if date changed and it's not the 'Start' label
                     if (currDate !== 'Start' && prevDate && currDate !== prevDate) {
                         const xPos = meta.data[i].x;
                         
@@ -1104,7 +1098,6 @@
                             ctx.lineTo(xPos, chartArea.bottom);
                             ctx.stroke();
                             
-                            // Write Date Label at the top
                             ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
                             ctx.font = '10px "JetBrains Mono"';
                             ctx.fillText(currDate.substring(5), xPos + 4, chartArea.top + 12);
@@ -1116,96 +1109,95 @@
             }
         };
 
+        // --- COMBINED CHART LOGIC ---
         function initCharts() {
             Chart.defaults.color='#6b7280';
             Chart.defaults.borderColor='#1f1f1f';
             Chart.defaults.font.family = "'JetBrains Mono', monospace";
             
-            // 1. EQUITY CHART
-            const ctx = document.getElementById('equityChart').getContext('2d');
-            equityChart = new Chart(ctx, {
+            const ctx = document.getElementById('combinedChart').getContext('2d');
+            combinedChart = new Chart(ctx, {
                 type: 'line',
                 plugins: [dayDividerPlugin], 
                 data: {
-                    labels:[],
-                    datasets:[{
-                        label:'Net Equity',
-                        data:[],
-                        fill: {
-                            target: { value: rawData.startingBalance },
-                            above: 'rgba(16, 185, 129, 0.15)', // Green Shadow
-                            below: 'rgba(244, 63, 94, 0.15)'   // Red Shadow
+                    labels: [],
+                    datasets: [
+                        {
+                            // Dataset 0: Equity
+                            label: 'Net Equity',
+                            yAxisID: 'y',
+                            data: [],
+                            fill: { target: { value: rawData.startingBalance }, above: 'rgba(16, 185, 129, 0.15)', below: 'rgba(244, 63, 94, 0.15)' },
+                            borderColor: function(context) {
+                                const chart = context.chart;
+                                const {ctx, chartArea, scales} = chart;
+                                if (!chartArea) return null;
+                                const yPos = scales.y.getPixelForValue(rawData.startingBalance);
+                                const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                                const stop = (yPos - chartArea.top) / (chartArea.bottom - chartArea.top);
+                                const clampedStop = Math.max(0, Math.min(1, stop));
+                                
+                                const alpha = chartFocus === 'equity' ? 1 : 0.3;
+                                gradient.addColorStop(0, `rgba(16, 185, 129, ${alpha})`);           
+                                gradient.addColorStop(clampedStop, `rgba(16, 185, 129, ${alpha})`); 
+                                gradient.addColorStop(clampedStop, `rgba(244, 63, 94, ${alpha})`); 
+                                gradient.addColorStop(1, `rgba(244, 63, 94, ${alpha})`);           
+                                return gradient;
+                            },
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            pointHoverRadius: 6,
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: '#fff',
+                            tension: 0.3,
+                            order: 2 // Draws underneath when Drawdown is focused
                         },
-                        borderColor: function(context) {
-                            const chart = context.chart;
-                            const {ctx, chartArea, scales} = chart;
-                            if (!chartArea) return null;
-                            const yPos = scales.y.getPixelForValue(rawData.startingBalance);
-                            const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-                            const stop = (yPos - chartArea.top) / (chartArea.bottom - chartArea.top);
-                            const clampedStop = Math.max(0, Math.min(1, stop));
-                            gradient.addColorStop(0, '#10b981');           
-                            gradient.addColorStop(clampedStop, '#10b981'); 
-                            gradient.addColorStop(clampedStop, '#f43f5e'); 
-                            gradient.addColorStop(1, '#f43f5e');           
-                            return gradient;
-                        },
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        pointHoverRadius: 6,
-                        pointHoverBackgroundColor: '#fff',
-                        pointHoverBorderColor: '#fff',
-                        tension: 0.3
-                    }]
+                        {
+                            // Dataset 1: Drawdown
+                            label: 'Drawdown',
+                            yAxisID: 'y1',
+                            data: [],
+                            fill: { target: 'origin', below: 'rgba(244, 63, 94, 0.05)' },
+                            borderColor: 'rgba(244, 63, 94, 0.3)',
+                            borderWidth: 1,
+                            pointRadius: 0,
+                            pointHoverRadius: 6,
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: '#fff',
+                            tension: 0.3,
+                            order: 1 // Draws on top when Drawdown is focused
+                        }
+                    ]
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false,
                     plugins: { 
                         legend: {display:false}, dayDivider: { mode: 'trades' },
-                        tooltip: { mode:'index', intersect:false, backgroundColor: '#111', titleColor: '#fff', bodyColor: '#ccc', borderColor: '#333', borderWidth: 1 } 
-                    },
-                    scales: { x: { grid:{display:false} }, y: { border:{display:false}, grid:{color:'#1a1a1a'} } },
-                    interaction: { mode: 'nearest', axis: 'x', intersect: false }
-                }
-            });
-
-            // 2. DRAWDOWN CHART
-            const ddCtx = document.getElementById('drawdownChart').getContext('2d');
-            drawdownChart = new Chart(ddCtx, {
-                type: 'line',
-                plugins: [dayDividerPlugin],
-                data: {
-                    labels:[],
-                    datasets:[{
-                        label:'Drawdown',
-                        data:[],
-                        fill: { target: 'origin', below: 'rgba(244, 63, 94, 0.15)' },
-                        borderColor: '#f43f5e',
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        pointHoverRadius: 6,
-                        pointHoverBackgroundColor: '#fff',
-                        pointHoverBorderColor: '#fff',
-                        tension: 0.3
-                    }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { 
-                        legend: {display:false}, dayDivider: { mode: 'trades' },
+                        zoom: { 
+                            pan: { enabled: true, mode: 'x' }, 
+                            zoom: { wheel: { enabled: true, speed: 0.1 }, pinch: { enabled: true }, mode: 'x' } 
+                        },
                         tooltip: { 
                             mode:'index', intersect:false, backgroundColor: '#111', titleColor: '#fff', bodyColor: '#ccc', borderColor: '#333', borderWidth: 1,
-                            callbacks: { label: function(context) { return 'Drawdown: ' + formatMoney(context.raw); } }
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) label += ': ';
+                                    label += formatMoney(context.raw);
+                                    return label;
+                                }
+                            }
                         } 
                     },
                     scales: { 
                         x: { grid:{display:false} }, 
-                        y: { border:{display:false}, grid:{color:'#1a1a1a'}, max: 0 } 
+                        y: { border:{display:false}, grid:{color:'#1a1a1a'} }, // Equity scale
+                        y1: { position: 'right', display: false, max: 0 } // Drawdown scale (max 0 forces it to hang from top)
                     },
                     interaction: { mode: 'nearest', axis: 'x', intersect: false }
                 }
             });
-            
+
             switchEquityView('trades');
 
             // --- OTHER CHARTS ---
@@ -1238,7 +1230,86 @@
             });
         }
 
-        // --- NEW PAGINATION LOGIC ---
+        // --- NEW: FOCUS TOGGLE ---
+        window.setChartFocus = (focus) => {
+            chartFocus = focus;
+            document.getElementById('focusEquityBtn').className = focus === 'equity' ? 'btn-tech active' : 'btn-tech';
+            document.getElementById('focusDrawdownBtn').className = focus === 'drawdown' ? 'btn-tech active' : 'btn-tech';
+            
+            const eqDataset = combinedChart.data.datasets[0];
+            const ddDataset = combinedChart.data.datasets[1];
+
+            if (focus === 'equity') {
+                eqDataset.borderWidth = 2;
+                eqDataset.order = 2; // Behind tooltips naturally, but dynamic visually
+                eqDataset.fill = { target: { value: rawData.startingBalance }, above: 'rgba(16, 185, 129, 0.15)', below: 'rgba(244, 63, 94, 0.15)' };
+                
+                ddDataset.borderWidth = 1;
+                ddDataset.borderColor = 'rgba(244, 63, 94, 0.3)';
+                ddDataset.fill = { target: 'origin', below: 'rgba(244, 63, 94, 0.05)' };
+                ddDataset.order = 1; 
+            } else {
+                eqDataset.borderWidth = 1;
+                eqDataset.order = 1;
+                eqDataset.fill = { target: { value: rawData.startingBalance }, above: 'rgba(16, 185, 129, 0.05)', below: 'rgba(244, 63, 94, 0.05)' };
+                
+                ddDataset.borderWidth = 2;
+                ddDataset.borderColor = 'rgba(244, 63, 94, 1)';
+                ddDataset.fill = { target: 'origin', below: 'rgba(244, 63, 94, 0.2)' };
+                ddDataset.order = 2; // Brings Drawdown strongly forward visually
+            }
+            
+            combinedChart.update();
+        }
+
+        // --- NEW: SMART WINDOW ZOOM ---
+        function applySmartWindowScale() {
+            const totalPoints = combinedChart.data.labels.length;
+            if (totalPoints === 0) return;
+            
+            const isMobile = window.innerWidth < 768;
+            const maxDisplay = isMobile ? Math.min(100, totalPoints) : totalPoints; 
+            const defaultDisplay = Math.min(30, totalPoints);
+            const minDisplay = Math.min(10, totalPoints);
+
+            // Apply Pinch Limits
+            combinedChart.options.plugins.zoom.limits = {
+                x: { min: 0, max: totalPoints - 1, minRange: minDisplay, maxRange: maxDisplay }
+            };
+
+            // Set initial scale to last 30
+            combinedChart.options.scales.x.min = Math.max(0, totalPoints - defaultDisplay);
+            combinedChart.options.scales.x.max = totalPoints - 1;
+            
+            combinedChart.update();
+        }
+
+        window.switchEquityView = (mode) => {
+            const d = mode==='days' ? rawData.equityDays : rawData.equityTrades;
+            const labels = d.map(x => mode==='days' ? x.date : 'T'+x.trade);
+            
+            // Calculate Drawdown
+            let currentPeak = STARTING_BALANCE;
+            const ddVals = d.map(x => {
+                if(x.equity > currentPeak) currentPeak = x.equity;
+                return x.equity - currentPeak; 
+            });
+
+            combinedChart.data.labels = labels;
+            combinedChart.data.datasets[0].data = d.map(x => x.equity);
+            combinedChart.data.datasets[1].data = ddVals;
+            
+            combinedChart.options.plugins.dayDivider.mode = mode;
+            combinedChart.data.datasets[0].customData = d;
+            
+            // Re-apply smart window framing
+            applySmartWindowScale();
+            
+            // Update UI buttons
+            document.getElementById('equityByTrades').className = mode==='trades'?'btn-tech active':'btn-tech';
+            document.getElementById('equityByDays').className = mode==='days'?'btn-tech active':'btn-tech';
+        }
+
         function displayTrades(page=1) {
             currentPage = page;
             const start = (currentPage - 1) * tradesPerPage;
@@ -1265,14 +1336,12 @@
                 </tr>`;
             }).join('');
             
-            // Handle empty search results visually
             if (filteredTrades.length === 0) {
                 document.getElementById('paginationInfo').textContent = `SHOWING 0-0 OF 0`;
             } else {
                 document.getElementById('paginationInfo').textContent = `SHOWING ${start+1}-${end} OF ${filteredTrades.length}`;
             }
 
-            // Fix button disabling logic
             const maxPages = Math.ceil(filteredTrades.length / tradesPerPage);
             document.getElementById('prevPage').disabled = currentPage <= 1;
             document.getElementById('nextPage').disabled = currentPage >= maxPages || filteredTrades.length === 0;
@@ -1296,7 +1365,7 @@
                 return (t.symbol.toLowerCase().includes(q) || t.notes?.toLowerCase().includes(q)) && 
                        (type===''?true:type==='win'?net>0:net<0);
             });
-            displayTrades(1); // Always reset to page 1 on new search
+            displayTrades(1); // Reset to page 1 on new search
         }
 
         // --- REVIEW MODAL LOGIC ---
@@ -1463,41 +1532,6 @@
             setTag('m_tag_entry', t.trade_entry);
             setTag('m_tag_mgmt', t.trade_management);
             setTag('m_tag_exit', t.trade_exit);
-        }
-
-        // --- CHART DYNAMIC SCROLLING UPDATE ---
-        window.switchEquityView = (mode) => {
-            const d = mode==='days' ? rawData.equityDays : rawData.equityTrades;
-            const labels = d.map(x => mode==='days' ? x.date : 'T'+x.trade);
-            
-            // Calculate dynamic width based on the amount of data
-            // This ensures long chart history expands natively across your screen rather than squashing!
-            const dynamicWidth = Math.max(800, labels.length * 25);
-            document.getElementById('equityChartContainer').style.minWidth = `${dynamicWidth}px`;
-            document.getElementById('drawdownChartContainer').style.minWidth = `${dynamicWidth}px`;
-
-            // 1. Update Equity Chart
-            equityChart.data.labels = labels;
-            equityChart.data.datasets[0].data = d.map(x => x.equity);
-            equityChart.options.plugins.dayDivider.mode = mode;
-            equityChart.data.datasets[0].customData = d;
-            equityChart.update();
-            
-            // 2. Update Drawdown Chart
-            drawdownChart.data.labels = labels;
-            let currentPeak = STARTING_BALANCE;
-            const ddVals = d.map(x => {
-                if(x.equity > currentPeak) currentPeak = x.equity;
-                return x.equity - currentPeak; 
-            });
-            drawdownChart.data.datasets[0].data = ddVals;
-            drawdownChart.options.plugins.dayDivider.mode = mode;
-            drawdownChart.data.datasets[0].customData = d;
-            drawdownChart.update();
-            
-            // Update UI buttons
-            document.getElementById('equityByTrades').className = mode==='trades'?'btn-tech active':'btn-tech';
-            document.getElementById('equityByDays').className = mode==='days'?'btn-tech active':'btn-tech';
         }
 
         document.addEventListener('keydown', e => {
