@@ -131,6 +131,8 @@
         .badge-green { background: rgba(16, 185, 129, 0.1); color: #34d399; border-color: rgba(16, 185, 129, 0.2); box-shadow: 0 0 10px rgba(16, 185, 129, 0.05); }
         .badge-red { background: rgba(244, 63, 94, 0.1); color: #fb7185; border-color: rgba(244, 63, 94, 0.2); box-shadow: 0 0 10px rgba(244, 63, 94, 0.05); }
         .badge-gray { background: rgba(255, 255, 255, 0.05); color: #9ca3af; border-color: rgba(255, 255, 255, 0.1); }
+        .badge-yellow { background: rgba(250, 204, 21, 0.1); color: #fde047; border-color: rgba(250, 204, 21, 0.2); box-shadow: 0 0 10px rgba(250, 204, 21, 0.05); }
+        .badge-dark { background: rgba(30, 30, 30, 0.8); color: #d1d5db; border-color: rgba(255, 255, 255, 0.15); box-shadow: 0 0 10px rgba(0, 0, 0, 0.2); }
 
         /* Modal Styles */
         .glass-overlay { 
@@ -572,6 +574,25 @@
             if(m1) id=m1[1]; else if(m2) id=m2[1];
             if(id) return { thumb: `https://drive.google.com/thumbnail?id=${id}&sz=w400`, full: `https://drive.google.com/thumbnail?id=${id}&sz=w1920` };
             return { thumb:url, full:url };
+        };
+
+        // NEW: Determine Session dynamically based on entry_time (CET/CEST - Sweden localized logic)
+        // London: 09:00 - 15:29
+        // New York: 15:30 - 22:00
+        // Asian / Overnight: Before 09:00 or after 22:00
+        const determineSession = (entryTime) => {
+            if (!entryTime) return '-';
+            const parts = entryTime.split(':');
+            if (parts.length < 2) return '-';
+            const hours = parseInt(parts[0], 10);
+            const mins = parseInt(parts[1], 10);
+            if (isNaN(hours) || isNaN(mins)) return '-';
+            
+            const totalMins = (hours * 60) + mins;
+            
+            if (totalMins >= 930 && totalMins < 1320) return 'New York'; // 15:30 to 22:00
+            if (totalMins >= 540 && totalMins < 930) return 'London'; // 09:00 to 15:29
+            return 'Asian / Overnight'; // Anything else
         };
 
         // ════ INIT ════
@@ -1294,9 +1315,16 @@
             document.getElementById('m_entry_price').textContent = parseFloat(t.entry_price).toFixed(2);
             document.getElementById('m_exit_price').textContent = parseFloat(t.exit_price).toFixed(2);
             document.getElementById('m_setup').textContent = t.setup || '-';
-            document.getElementById('m_session').textContent = t.session || '-';
+            
+            // Dynamic Session injected here
+            document.getElementById('m_session').textContent = determineSession(t.entry_time);
+            
             document.getElementById('m_score').textContent = t.score || t['Total Score'] || '-';
-            document.getElementById('m_fees').textContent = '-' + formatMoney(Math.abs(parseMoneyValue(t.fees||0)));
+            
+            // Fees Fix: Remove the double sign format (-+$X.XX)
+            const feesVal = Math.abs(parseMoneyValue(t.fees||0));
+            document.getElementById('m_fees').textContent = feesVal > 0 ? `-$${feesVal.toFixed(2)}` : '$0.00';
+            
             document.getElementById('m_notes').textContent = t.notes || 'No notes recorded.';
 
             // Image Logic
@@ -1314,16 +1342,31 @@
                 lnk.classList.add('opacity-0'); 
             }
 
-            // Tags Logic
-            const setTag = (id,v) => {
-                const el=document.getElementById(id);
-                if(!el) return;
-                el.textContent=v||'-';
-                let style = 'badge badge-gray';
-                if(v?.match(/follow|complete/i)) style = 'badge badge-green';
-                if(v?.match(/fail|no|impulse|error|tilt/i)) style = 'badge badge-red';
-                el.className=style;
+            // Tags Logic updated to match requested styles
+            const setTag = (id, v) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.textContent = v || '-';
+                
+                let style = 'badge badge-gray'; // Default
+                if (!v) { el.className = style; return; }
+                
+                const val = v.toLowerCase();
+                if (val.includes('complete prep') || val.includes('followed plan') || val.includes('complete') || val.includes('follow')) {
+                    style = 'badge badge-green';
+                } else if (val.includes('major deviation')) {
+                    style = 'badge badge-yellow';
+                } else if (val.includes('tilt') || val.includes('no prep') || val.includes('fail') || val.includes('impulse')) {
+                    style = 'badge badge-red';
+                } else if (val.includes('error')) {
+                    style = 'badge badge-dark';
+                } else if (val.includes('minor deviation') || val.includes('partial prep')) {
+                    style = 'badge badge-gray'; // explicit just in case
+                }
+                
+                el.className = style;
             };
+            
             setTag('m_tag_pre', t.pre_trade);
             setTag('m_tag_entry', t.trade_entry);
             setTag('m_tag_mgmt', t.trade_management);
