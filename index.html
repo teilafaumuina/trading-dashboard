@@ -1067,7 +1067,7 @@
             renderCalendar();
         }
 
-        // --- CUSTOM PLUGIN: DRAW VERTICAL LINE PER DAY ---
+        // --- CUSTOM PLUGIN: DRAW VERTICAL LINE PER DAY (UPDATED) ---
         const dayDividerPlugin = {
             id: 'dayDivider',
             beforeDraw: (chart) => {
@@ -1078,6 +1078,8 @@
                 
                 if (!customData || !pluginOptions || pluginOptions.mode !== 'trades') return;
                 
+                const isMobile = window.innerWidth < 768;
+
                 ctx.save();
                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)'; 
                 ctx.lineWidth = 1;
@@ -1098,9 +1100,21 @@
                             ctx.lineTo(xPos, chartArea.bottom);
                             ctx.stroke();
                             
-                            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-                            ctx.font = '10px "JetBrains Mono"';
-                            ctx.fillText(currDate.substring(5), xPos + 4, chartArea.top + 12);
+                            if (isMobile) {
+                                ctx.save();
+                                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                                ctx.font = '9px "JetBrains Mono"';
+                                ctx.translate(xPos, chartArea.top + 5); 
+                                ctx.rotate(-Math.PI / 2); // Rotate -90 degrees
+                                ctx.textAlign = 'right';
+                                ctx.fillText(currDate.substring(5), 0, 4); // Offset text from line
+                                ctx.restore();
+                            } else {
+                                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                                ctx.font = '10px "JetBrains Mono"';
+                                ctx.textAlign = 'left';
+                                ctx.fillText(currDate.substring(5), xPos + 4, chartArea.top + 12);
+                            }
                         }
                     }
                     if (currDate !== 'Start') prevDate = currDate;
@@ -1109,7 +1123,7 @@
             }
         };
 
-        // --- COMBINED CHART LOGIC ---
+        // --- COMBINED CHART LOGIC (UPDATED) ---
         function initCharts() {
             Chart.defaults.color='#6b7280';
             Chart.defaults.borderColor='#1f1f1f';
@@ -1178,6 +1192,7 @@
                             zoom: { wheel: { enabled: true, speed: 0.1 }, pinch: { enabled: true }, mode: 'x' } 
                         },
                         tooltip: { 
+                            enabled: window.innerWidth >= 768, // DISABLES TOOLTIP ON MOBILE
                             mode:'index', intersect:false, backgroundColor: '#111', titleColor: '#fff', bodyColor: '#ccc', borderColor: '#333', borderWidth: 1,
                             callbacks: {
                                 label: function(context) {
