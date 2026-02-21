@@ -10,7 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     
-    <!-- Zoom & Pan Plugins -->
+    <!-- Zoom & Pan Plugins (Also used for Swipe Gestures) -->
     <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
     
@@ -52,6 +52,7 @@
         ::-webkit-scrollbar-track { background: var(--bg-deep); }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #555; }
+        .custom-scrollbar::-webkit-scrollbar { height: 6px; }
         
         /* ════ COMPONENT STYLING ════ */
         
@@ -409,7 +410,7 @@
         <div id="metricsContainer" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8"></div>
 
         <!-- Equity -->
-        <div class="tech-card rounded-xl p-6 md:p-8 mb-8">
+        <div class="tech-card rounded-xl p-6 md:p-8 mb-4">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-lg font-semibold tracking-wide text-gray-200">
                     Net Equity Curve
@@ -424,6 +425,14 @@
             </div>
             <!-- Added dblclick listener to easily reset Zoom -->
             <div class="chart-container-lg" ondblclick="if(equityChart.resetZoom) equityChart.resetZoom()"><canvas id="equityChart"></canvas></div>
+        </div>
+
+        <!-- Drawdown -->
+        <div class="tech-card rounded-xl p-6 md:p-8 mb-8">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-lg font-semibold tracking-wide text-gray-200">Drawdown Profile</h2>
+            </div>
+            <div class="w-full relative" style="height: 150px;" ondblclick="if(drawdownChart.resetZoom) drawdownChart.resetZoom()"><canvas id="drawdownChart"></canvas></div>
         </div>
 
         <!-- Calendar & Evaluation -->
@@ -471,7 +480,7 @@
             <h2 class="text-lg font-semibold mb-6 flex items-center gap-3">
                 <span class="text-xl">🧠</span> Agent Reviews
             </h2>
-            <div class="flex gap-5 overflow-x-auto pb-4" id="reviewsContainer">
+            <div class="flex gap-5 overflow-x-auto pb-4 custom-scrollbar" id="reviewsContainer">
                 <div class="text-gray-500 font-mono text-sm">No reviews logged in system.</div>
             </div>
         </div>
@@ -501,6 +510,23 @@
 
         <!-- Insights -->
         <div id="insightsContainer" class="mb-8"></div>
+
+        <!-- Screenshot Gallery -->
+        <div class="tech-card rounded-xl p-6 md:p-8 mb-8">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-lg font-semibold tracking-wide text-gray-200 flex items-center gap-2">
+                    <span class="text-xl">🖼️</span> Setup Gallery
+                </h2>
+                <select id="galleryFilter" class="bg-[#0a0a0a] border border-[#333] rounded px-4 py-2 text-xs font-mono uppercase text-gray-300 focus:border-green-500 focus:outline-none" onchange="renderGallery()">
+                    <option value="all">ALL SCREENSHOTS</option>
+                    <option value="win">WINNING SETUPS</option>
+                    <option value="loss">LOSING SETUPS</option>
+                </select>
+            </div>
+            <div class="flex gap-4 overflow-x-auto pb-4 custom-scrollbar" id="galleryContainer">
+                <div class="text-gray-500 font-mono text-sm p-2">Loading screenshots...</div>
+            </div>
+        </div>
 
         <!-- Table -->
         <div class="tech-card rounded-xl p-6 md:p-8">
@@ -547,7 +573,7 @@
         // ════ STATE ════
         let rawData = {}, allTrades = [], filteredTrades = [], allReviews = [];
         let currentPage = 1, tradesPerPage = 15;
-        let equityChart, timeChart, symbolChart, weekdayChart;
+        let equityChart, drawdownChart, timeChart, symbolChart, weekdayChart;
         let activeModalId = null, currentTradeIndex = -1, currentReviewIndex = -1;
 
         // ════ UTILS ════
@@ -576,10 +602,8 @@
             return { thumb:url, full:url };
         };
 
-        // NEW: Determine Session dynamically based on entry_time (CET/CEST - Sweden localized logic)
-        // London: 09:00 - 15:29
-        // New York: 15:30 - 22:00
-        // Asian / Overnight: Before 09:00 or after 22:00
+        // Determine Session dynamically based on entry_time (CET/CEST - Sweden localized logic)
+        // London: 09:00 - 15:29 | New York: 15:30 - 22:00 | Asian / Overnight: Before 09:00 or after 22:00
         const determineSession = (entryTime) => {
             if (!entryTime) return '-';
             const parts = entryTime.split(':');
@@ -636,6 +660,7 @@
                 document.getElementById('loadingState').classList.add('hidden');
                 document.getElementById('mainDashboard').classList.remove('hidden');
                 initDashboard();
+                initSwipeGestures();
             } catch(e) {
                 document.getElementById('loadingState').classList.add('hidden');
                 document.getElementById('errorState').classList.remove('hidden');
@@ -643,6 +668,27 @@
                 console.error(e);
             }
         });
+
+        function initSwipeGestures() {
+            if (typeof Hammer !== 'undefined') {
+                // We use touchAction: 'pan-y' to ensure native vertical scrolling still works perfectly!
+                const tradeModalPanel = document.querySelector('#tradeModal .glass-panel');
+                if (tradeModalPanel) {
+                    const mcTrade = new Hammer(tradeModalPanel, { touchAction: 'pan-y' });
+                    mcTrade.get('swipe').set({ direction: Hammer.DIRECTION_HORIZONTAL });
+                    mcTrade.on('swipeleft', () => navigateTrade(1));
+                    mcTrade.on('swiperight', () => navigateTrade(-1));
+                }
+
+                const reviewModalPanel = document.querySelector('#reviewModal .glass-panel');
+                if (reviewModalPanel) {
+                    const mcReview = new Hammer(reviewModalPanel, { touchAction: 'pan-y' });
+                    mcReview.get('swipe').set({ direction: Hammer.DIRECTION_HORIZONTAL });
+                    mcReview.on('swipeleft', () => navigateReview(1));
+                    mcReview.on('swiperight', () => navigateReview(-1));
+                }
+            }
+        }
 
         function recalculateAggregations() {
             const sym = {};
@@ -674,7 +720,6 @@
             rawData.weekdays = wkd;
         }
 
-        // --- NEW: SPOTLIGHT EFFECT ---
         function initSpotlightEffect() {
             const cards = document.querySelectorAll('.tech-card');
             document.getElementById('mainDashboard').onmousemove = e => {
@@ -700,32 +745,58 @@
             initCharts();
             renderCalendar();
             displayTrades();
+            renderGallery(); // Render Setup Gallery
             
             // ANIMATIONS
             initSpotlightEffect();
             
-            const containers = [
-                document.getElementById('metricsContainer'),
-                document.querySelector('.chart-container-lg')?.parentElement,
-                document.querySelector('.calendar-grid-8')?.parentElement?.parentElement,
-                document.getElementById('evaluationPanel')?.parentElement,
-                document.getElementById('symbolPerformance')?.parentElement,
-                document.getElementById('timeAnalysisChart')?.parentElement?.parentElement,
-                document.getElementById('weekdayChart')?.parentElement?.parentElement,
-                document.getElementById('reviewsContainer')?.parentElement,
-                document.getElementById('lastTradeWidget'),
-                document.querySelector('.table-container')?.parentElement
-            ];
-            
+            const containers = document.querySelectorAll('.tech-card, #metricsContainer');
             containers.forEach((el, index) => {
                 if(el) {
                     el.classList.add('animate-enter');
-                    el.style.animationDelay = `${index * 100}ms`;
+                    el.style.animationDelay = `${index * 50}ms`;
                 }
             });
         }
 
         // ════ RENDERERS ════
+        function renderGallery() {
+            const filter = document.getElementById('galleryFilter').value;
+            const container = document.getElementById('galleryContainer');
+            
+            const tradesWithPics = allTrades.filter(t => {
+                const hasPic = t.screenshot || t.screenshot_url_A;
+                if(!hasPic) return false;
+                const net = getNetPnL(t);
+                if(filter === 'win' && net <= 0) return false;
+                if(filter === 'loss' && net >= 0) return false;
+                return true;
+            });
+            
+            if(tradesWithPics.length === 0) {
+                container.innerHTML = '<div class="text-gray-500 font-mono text-sm p-2 w-full text-center py-10 border border-[#222] rounded bg-[#0a0a0a]">No screenshots match this filter.</div>';
+                return;
+            }
+            
+            container.innerHTML = tradesWithPics.map(t => {
+                const {thumb, full} = driveUrls(t.screenshot || t.screenshot_url_A);
+                const net = getNetPnL(t);
+                const isWin = net >= 0;
+                const borderClass = isWin ? 'hover:border-green-500/50' : 'hover:border-red-500/50';
+                const textClass = isWin ? 'text-green-400' : 'text-red-400';
+                
+                return `
+                <div class="flex-shrink-0 w-[220px] h-[140px] relative rounded-lg overflow-hidden border border-[#222] cursor-pointer group transition-all ${borderClass} shadow-lg hover:shadow-2xl" onclick="openTradeModal('${t.trade_id}')">
+                    <img src="${thumb || full}" class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-300" loading="lazy" alt="Trade Setup" />
+                    <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/80 to-transparent pt-6 pb-2 px-3 flex justify-between items-end">
+                        <span class="text-xs font-mono font-bold text-white shadow-black drop-shadow-md">${t.symbol}</span>
+                        <span class="text-xs font-mono font-bold ${textClass} shadow-black drop-shadow-md">${formatMoney(net)}</span>
+                    </div>
+                    <div class="absolute top-2 left-2 bg-black/60 backdrop-blur-md px-1.5 py-0.5 rounded text-[9px] font-bold text-gray-300 border border-white/10 uppercase tracking-widest">${t.trade_id}</div>
+                </div>`;
+            }).join('');
+        }
+
         function renderReviewsPanel() {
             const container = document.getElementById('reviewsContainer');
             if(allReviews.length === 0) {
@@ -959,7 +1030,7 @@
             document.getElementById('calendarGrid').innerHTML = html;
         }
 
-        // --- NEW DAY MODAL LOGIC ---
+        // --- DAY MODAL LOGIC ---
         function openDayModal(dateStr) {
             const trades = rawData.trades.filter(t => t.date === dateStr);
             if(trades.length === 0) return;
@@ -1000,7 +1071,7 @@
             renderCalendar();
         }
 
-        // --- NEW CUSTOM PLUGIN: DRAW VERTICAL LINE PER DAY ---
+        // --- CUSTOM PLUGIN: DRAW VERTICAL LINE PER DAY ---
         const dayDividerPlugin = {
             id: 'dayDivider',
             beforeDraw: (chart) => {
@@ -1051,47 +1122,33 @@
             Chart.defaults.borderColor='#1f1f1f';
             Chart.defaults.font.family = "'JetBrains Mono', monospace";
             
+            // 1. EQUITY CHART
             const ctx = document.getElementById('equityChart').getContext('2d');
-            
             equityChart = new Chart(ctx, {
                 type: 'line',
-                plugins: [dayDividerPlugin], // Register Custom Divider Line
+                plugins: [dayDividerPlugin], 
                 data: {
                     labels:[],
                     datasets:[{
                         label:'Net Equity',
                         data:[],
-                        // 1. The Fill Logic (Handles the Green/Red Shadow Area)
                         fill: {
                             target: { value: rawData.startingBalance },
                             above: 'rgba(16, 185, 129, 0.15)', // Green Shadow
                             below: 'rgba(244, 63, 94, 0.15)'   // Red Shadow
                         },
-                        // 2. The Line Color Logic (Uses a Gradient to split exactly at 50k)
                         borderColor: function(context) {
                             const chart = context.chart;
                             const {ctx, chartArea, scales} = chart;
                             if (!chartArea) return null;
-                            
-                            // Get pixel position of the starting balance (50,000)
                             const yPos = scales.y.getPixelForValue(rawData.startingBalance);
-                            
-                            // Create a gradient from Top to Bottom
                             const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-                            
-                            // Calculate the stop position (0 to 1) based on where 50k is on screen
-                            // Note: chartArea.bottom is the higher pixel value (lower value on graph)
                             const stop = (yPos - chartArea.top) / (chartArea.bottom - chartArea.top);
-                            
-                            // Handle cases where the line is fully above or fully below the screen
                             const clampedStop = Math.max(0, Math.min(1, stop));
-
-                            // Define the hard stop: Green above, Red below
-                            gradient.addColorStop(0, '#10b981');           // Green at Top
-                            gradient.addColorStop(clampedStop, '#10b981'); // Green down to 50k
-                            gradient.addColorStop(clampedStop, '#f43f5e'); // Switch to Red instantly
-                            gradient.addColorStop(1, '#f43f5e');           // Red at Bottom
-                            
+                            gradient.addColorStop(0, '#10b981');           
+                            gradient.addColorStop(clampedStop, '#10b981'); 
+                            gradient.addColorStop(clampedStop, '#f43f5e'); 
+                            gradient.addColorStop(1, '#f43f5e');           
                             return gradient;
                         },
                         borderWidth: 2,
@@ -1103,36 +1160,50 @@
                     }]
                 },
                 options: {
-                    responsive: true, 
-                    maintainAspectRatio: false,
+                    responsive: true, maintainAspectRatio: false,
                     plugins: { 
-                        legend: {display:false}, 
-                        dayDivider: { mode: 'trades' }, // init state for plugin
-                        // --- ZOOM & PAN LOGIC ---
-                        zoom: {
-                            pan: {
-                                enabled: true,
-                                mode: 'x', // Pan left/right only
-                            },
-                            zoom: {
-                                wheel: { enabled: true, speed: 0.1 }, // Scroll to zoom
-                                pinch: { enabled: true },             // Pinch to zoom (mobile)
-                                mode: 'x'                             // Zoom x-axis only
-                            }
-                        },
-                        tooltip: {
-                            mode:'index', 
-                            intersect:false, 
-                            backgroundColor: '#111', 
-                            titleColor: '#fff', 
-                            bodyColor: '#ccc', 
-                            borderColor: '#333', 
-                            borderWidth: 1
+                        legend: {display:false}, dayDivider: { mode: 'trades' },
+                        zoom: { pan: { enabled: true, mode: 'x' }, zoom: { wheel: { enabled: true, speed: 0.1 }, pinch: { enabled: true }, mode: 'x' } },
+                        tooltip: { mode:'index', intersect:false, backgroundColor: '#111', titleColor: '#fff', bodyColor: '#ccc', borderColor: '#333', borderWidth: 1 } 
+                    },
+                    scales: { x: { grid:{display:false} }, y: { border:{display:false}, grid:{color:'#1a1a1a'} } },
+                    interaction: { mode: 'nearest', axis: 'x', intersect: false }
+                }
+            });
+
+            // 2. DRAWDOWN CHART
+            const ddCtx = document.getElementById('drawdownChart').getContext('2d');
+            drawdownChart = new Chart(ddCtx, {
+                type: 'line',
+                plugins: [dayDividerPlugin],
+                data: {
+                    labels:[],
+                    datasets:[{
+                        label:'Drawdown',
+                        data:[],
+                        fill: { target: 'origin', below: 'rgba(244, 63, 94, 0.15)' },
+                        borderColor: '#f43f5e',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: '#fff',
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { 
+                        legend: {display:false}, dayDivider: { mode: 'trades' },
+                        zoom: { pan: { enabled: true, mode: 'x' }, zoom: { wheel: { enabled: true, speed: 0.1 }, pinch: { enabled: true }, mode: 'x' } },
+                        tooltip: { 
+                            mode:'index', intersect:false, backgroundColor: '#111', titleColor: '#fff', bodyColor: '#ccc', borderColor: '#333', borderWidth: 1,
+                            callbacks: { label: function(context) { return 'Drawdown: ' + formatMoney(context.raw); } }
                         } 
                     },
                     scales: { 
                         x: { grid:{display:false} }, 
-                        y: { border:{display:false}, grid:{color:'#1a1a1a'} } 
+                        y: { border:{display:false}, grid:{color:'#1a1a1a'}, max: 0 } 
                     },
                     interaction: { mode: 'nearest', axis: 'x', intersect: false }
                 }
@@ -1140,7 +1211,7 @@
             
             switchEquityView('trades');
 
-            // --- OTHER CHARTS (Unchanged) ---
+            // --- OTHER CHARTS ---
             const sortedHours = Object.keys(rawData.hours).sort();
             new Chart(document.getElementById('timeAnalysisChart'), {
                 type: 'bar',
@@ -1201,7 +1272,7 @@
             currentPage = page;
         }
 
-        // --- NEW: REVIEW MODAL LOGIC ---
+        // --- REVIEW MODAL LOGIC ---
         function openReviewModal(id) {
             const idx = allReviews.findIndex(r => r.review_id === id);
             if(idx === -1) return;
@@ -1386,16 +1457,30 @@
 
         window.switchEquityView = (mode) => {
             const d = mode==='days' ? rawData.equityDays : rawData.equityTrades;
-            equityChart.data.labels = d.map(x => mode==='days' ? x.date : 'T'+x.trade);
-            equityChart.data.datasets[0].data = d.map(x => x.equity);
+            const labels = d.map(x => mode==='days' ? x.date : 'T'+x.trade);
             
-            // Pass custom data to plugin & reset zoom on mode change
+            // 1. Update Equity Chart
+            equityChart.data.labels = labels;
+            equityChart.data.datasets[0].data = d.map(x => x.equity);
             equityChart.options.plugins.dayDivider.mode = mode;
             equityChart.data.datasets[0].customData = d;
-            
             if(equityChart.resetZoom) equityChart.resetZoom();
-            
             equityChart.update();
+            
+            // 2. Update Drawdown Chart
+            drawdownChart.data.labels = labels;
+            let currentPeak = STARTING_BALANCE;
+            const ddVals = d.map(x => {
+                if(x.equity > currentPeak) currentPeak = x.equity;
+                return x.equity - currentPeak; 
+            });
+            drawdownChart.data.datasets[0].data = ddVals;
+            drawdownChart.options.plugins.dayDivider.mode = mode;
+            drawdownChart.data.datasets[0].customData = d;
+            if(drawdownChart.resetZoom) drawdownChart.resetZoom();
+            drawdownChart.update();
+            
+            // Update UI buttons
             document.getElementById('equityByTrades').className = mode==='trades'?'btn-tech active':'btn-tech';
             document.getElementById('equityByDays').className = mode==='days'?'btn-tech active':'btn-tech';
         }
