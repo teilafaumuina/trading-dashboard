@@ -6,13 +6,13 @@
     <title>Teila's Trading Terminal</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>"/>
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     
-    <!-- Zoom & Pan Plugins (Also used for Swipe Gestures) -->
+    <!-- Hammer.js (Kept strictly for Swipe Gestures on Modals) -->
     <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -96,8 +96,9 @@
         .tech-card:hover { transform: translateY(-2px); box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.5); }
 
         /* Charts */
-        .chart-container-lg { height: 280px; width: 100%; position: relative; }
-        @media (min-width: 768px) { .chart-container-lg { height: 380px; } }
+        .chart-wrapper { position: relative; width: 100%; height: 280px; }
+        @media (min-width: 768px) { .chart-wrapper { height: 380px; } }
+        .drawdown-wrapper { position: relative; width: 100%; height: 150px; }
 
         /* Calendar */
         .calendar-grid-8 { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; min-width: 800px; }
@@ -412,19 +413,18 @@
         <!-- Equity -->
         <div class="tech-card rounded-xl p-6 md:p-8 mb-4">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-lg font-semibold tracking-wide text-gray-200">
-                    Net Equity Curve
-                    <span class="text-[10px] text-gray-500 ml-3 font-mono font-normal tracking-wide border border-[#333] bg-[#111] px-2 py-0.5 rounded hidden sm:inline-block cursor-help opacity-70" title="Double-click chart to reset view">
-                        SCROLL TO ZOOM • DRAG TO PAN
-                    </span>
-                </h2>
+                <h2 class="text-lg font-semibold tracking-wide text-gray-200">Net Equity Curve</h2>
                 <div class="flex space-x-1 bg-[#1a1a1a] p-1 rounded-lg border border-[#333]">
                     <button id="equityByTrades" class="btn-tech active" onclick="switchEquityView('trades')">Trades</button>
                     <button id="equityByDays" class="btn-tech" onclick="switchEquityView('days')">Days</button>
                 </div>
             </div>
-            <!-- Added dblclick listener to easily reset Zoom -->
-            <div class="chart-container-lg" ondblclick="if(equityChart.resetZoom) equityChart.resetZoom()"><canvas id="equityChart"></canvas></div>
+            <!-- Horizontal Native Scroll Wrapper -->
+            <div class="overflow-x-auto custom-scrollbar pb-2">
+                <div id="equityChartContainer" class="chart-wrapper">
+                    <canvas id="equityChart"></canvas>
+                </div>
+            </div>
         </div>
 
         <!-- Drawdown -->
@@ -432,7 +432,12 @@
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-lg font-semibold tracking-wide text-gray-200">Drawdown Profile</h2>
             </div>
-            <div class="w-full relative" style="height: 150px;" ondblclick="if(drawdownChart.resetZoom) drawdownChart.resetZoom()"><canvas id="drawdownChart"></canvas></div>
+            <!-- Horizontal Native Scroll Wrapper -->
+            <div class="overflow-x-auto custom-scrollbar pb-2">
+                <div id="drawdownChartContainer" class="drawdown-wrapper">
+                    <canvas id="drawdownChart"></canvas>
+                </div>
+            </div>
         </div>
 
         <!-- Calendar & Evaluation -->
@@ -477,9 +482,7 @@
 
         <!-- Performance Reviews Panel -->
         <div class="tech-card rounded-xl p-6 md:p-8 mb-8">
-            <h2 class="text-lg font-semibold mb-6 flex items-center gap-3">
-                <span class="text-xl">🧠</span> Agent Reviews
-            </h2>
+            <h2 class="text-lg font-semibold mb-6 tracking-wide text-gray-200">Agent Reviews</h2>
             <div class="flex gap-5 overflow-x-auto pb-4 custom-scrollbar" id="reviewsContainer">
                 <div class="text-gray-500 font-mono text-sm">No reviews logged in system.</div>
             </div>
@@ -514,16 +517,15 @@
         <!-- Screenshot Gallery -->
         <div class="tech-card rounded-xl p-6 md:p-8 mb-8">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-lg font-semibold tracking-wide text-gray-200 flex items-center gap-2">
-                    <span class="text-xl">🖼️</span> Setup Gallery
-                </h2>
+                <h2 class="text-lg font-semibold tracking-wide text-gray-200">Setup Gallery</h2>
                 <select id="galleryFilter" class="bg-[#0a0a0a] border border-[#333] rounded px-4 py-2 text-xs font-mono uppercase text-gray-300 focus:border-green-500 focus:outline-none" onchange="renderGallery()">
                     <option value="all">ALL SCREENSHOTS</option>
                     <option value="win">WINNING SETUPS</option>
                     <option value="loss">LOSING SETUPS</option>
                 </select>
             </div>
-            <div class="flex gap-4 overflow-x-auto pb-4 custom-scrollbar" id="galleryContainer">
+            <!-- Dynamic Grid: Horizontal flex on mobile, 3-column grid on desktop -->
+            <div class="flex flex-nowrap md:grid md:grid-cols-3 gap-4 overflow-x-auto md:overflow-visible pb-4 custom-scrollbar" id="galleryContainer">
                 <div class="text-gray-500 font-mono text-sm p-2">Loading screenshots...</div>
             </div>
         </div>
@@ -671,7 +673,6 @@
 
         function initSwipeGestures() {
             if (typeof Hammer !== 'undefined') {
-                // We use touchAction: 'pan-y' to ensure native vertical scrolling still works perfectly!
                 const tradeModalPanel = document.querySelector('#tradeModal .glass-panel');
                 if (tradeModalPanel) {
                     const mcTrade = new Hammer(tradeModalPanel, { touchAction: 'pan-y' });
@@ -745,7 +746,7 @@
             initCharts();
             renderCalendar();
             displayTrades();
-            renderGallery(); // Render Setup Gallery
+            renderGallery();
             
             // ANIMATIONS
             initSpotlightEffect();
@@ -786,13 +787,13 @@
                 const textClass = isWin ? 'text-green-400' : 'text-red-400';
                 
                 return `
-                <div class="flex-shrink-0 w-[220px] h-[140px] relative rounded-lg overflow-hidden border border-[#222] cursor-pointer group transition-all ${borderClass} shadow-lg hover:shadow-2xl" onclick="openTradeModal('${t.trade_id}')">
+                <div class="flex-shrink-0 w-[240px] md:w-full h-[150px] md:h-[220px] relative rounded-lg overflow-hidden border border-[#222] cursor-pointer group transition-all ${borderClass} shadow-lg hover:shadow-2xl" onclick="openTradeModal('${t.trade_id}')">
                     <img src="${thumb || full}" class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-300" loading="lazy" alt="Trade Setup" />
-                    <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/80 to-transparent pt-6 pb-2 px-3 flex justify-between items-end">
-                        <span class="text-xs font-mono font-bold text-white shadow-black drop-shadow-md">${t.symbol}</span>
-                        <span class="text-xs font-mono font-bold ${textClass} shadow-black drop-shadow-md">${formatMoney(net)}</span>
+                    <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/80 to-transparent pt-8 pb-3 px-4 flex justify-between items-end">
+                        <span class="text-sm font-mono font-bold text-white shadow-black drop-shadow-md">${t.symbol}</span>
+                        <span class="text-sm font-mono font-bold ${textClass} shadow-black drop-shadow-md">${formatMoney(net)}</span>
                     </div>
-                    <div class="absolute top-2 left-2 bg-black/60 backdrop-blur-md px-1.5 py-0.5 rounded text-[9px] font-bold text-gray-300 border border-white/10 uppercase tracking-widest">${t.trade_id}</div>
+                    <div class="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2 py-1 rounded text-[10px] font-bold text-gray-300 border border-white/10 uppercase tracking-widest">${t.trade_id}</div>
                 </div>`;
             }).join('');
         }
@@ -864,7 +865,7 @@
         function buildInsights() {
             const i = rawData.insights || [];
             if(i.length) document.getElementById('insightsContainer').innerHTML = `<div class="tech-card rounded-xl p-6 md:p-8">
-                <h2 class="text-lg font-semibold mb-6 flex items-center gap-2"><span class="text-xl">💡</span> Algorithm Insights</h2>
+                <h2 class="text-lg font-semibold mb-6 tracking-wide text-gray-200">Algorithm Insights</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     ${i.map(x => `<div class="bg-[#111] p-4 rounded border border-[#222]"><p class="text-sm text-gray-300 leading-relaxed">${x}</p></div>`).join('')}
                 </div>
@@ -891,7 +892,6 @@
                 {l:'Balance', v:'$'+curBal.toFixed(2), c:'text-white', sub:`${((net/rawData.startingBalance)*100).toFixed(2)}% ROI`, mono:true}
             ];
 
-            // NOTE: Updated text-2xl md:text-3xl here for mobile font size adjustment
             document.getElementById('metricsContainer').innerHTML = m.map(i => `<div class="tech-card p-5 rounded-lg flex flex-col justify-between">
                 <p class="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-2">${i.l}</p>
                 ${i.visual ? `<div class="flex justify-between items-center">
@@ -1107,7 +1107,6 @@
                             // Write Date Label at the top
                             ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
                             ctx.font = '10px "JetBrains Mono"';
-                            // Format: "YYYY-MM-DD" down to "MM-DD"
                             ctx.fillText(currDate.substring(5), xPos + 4, chartArea.top + 12);
                         }
                     }
@@ -1163,7 +1162,6 @@
                     responsive: true, maintainAspectRatio: false,
                     plugins: { 
                         legend: {display:false}, dayDivider: { mode: 'trades' },
-                        zoom: { pan: { enabled: true, mode: 'x' }, zoom: { wheel: { enabled: true, speed: 0.1 }, pinch: { enabled: true }, mode: 'x' } },
                         tooltip: { mode:'index', intersect:false, backgroundColor: '#111', titleColor: '#fff', bodyColor: '#ccc', borderColor: '#333', borderWidth: 1 } 
                     },
                     scales: { x: { grid:{display:false} }, y: { border:{display:false}, grid:{color:'#1a1a1a'} } },
@@ -1195,7 +1193,6 @@
                     responsive: true, maintainAspectRatio: false,
                     plugins: { 
                         legend: {display:false}, dayDivider: { mode: 'trades' },
-                        zoom: { pan: { enabled: true, mode: 'x' }, zoom: { wheel: { enabled: true, speed: 0.1 }, pinch: { enabled: true }, mode: 'x' } },
                         tooltip: { 
                             mode:'index', intersect:false, backgroundColor: '#111', titleColor: '#fff', bodyColor: '#ccc', borderColor: '#333', borderWidth: 1,
                             callbacks: { label: function(context) { return 'Drawdown: ' + formatMoney(context.raw); } }
@@ -1241,9 +1238,11 @@
             });
         }
 
+        // --- NEW PAGINATION LOGIC ---
         function displayTrades(page=1) {
-            const start = (page-1)*tradesPerPage;
-            const end = Math.min(start+tradesPerPage, filteredTrades.length);
+            currentPage = page;
+            const start = (currentPage - 1) * tradesPerPage;
+            const end = Math.min(start + tradesPerPage, filteredTrades.length);
             const show = filteredTrades.slice(start, end);
 
             document.getElementById('tradesTableBody').innerHTML = show.map(t => {
@@ -1266,10 +1265,38 @@
                 </tr>`;
             }).join('');
             
-            document.getElementById('paginationInfo').textContent = `SHOWING ${start+1}-${end} OF ${filteredTrades.length}`;
-            document.getElementById('prevPage').disabled = page <= 1;
-            document.getElementById('nextPage').disabled = page >= Math.ceil(filteredTrades.length/tradesPerPage);
-            currentPage = page;
+            // Handle empty search results visually
+            if (filteredTrades.length === 0) {
+                document.getElementById('paginationInfo').textContent = `SHOWING 0-0 OF 0`;
+            } else {
+                document.getElementById('paginationInfo').textContent = `SHOWING ${start+1}-${end} OF ${filteredTrades.length}`;
+            }
+
+            // Fix button disabling logic
+            const maxPages = Math.ceil(filteredTrades.length / tradesPerPage);
+            document.getElementById('prevPage').disabled = currentPage <= 1;
+            document.getElementById('nextPage').disabled = currentPage >= maxPages || filteredTrades.length === 0;
+        }
+
+        window.changePage = (direction) => {
+            const maxPages = Math.ceil(filteredTrades.length / tradesPerPage);
+            let next = currentPage + direction;
+            if (next < 1) next = 1;
+            if (next > maxPages) next = maxPages;
+            if (next !== currentPage) {
+                displayTrades(next);
+            }
+        }
+
+        window.filterTrades = () => {
+            const q = document.getElementById('tradeSearch').value.toLowerCase();
+            const type = document.getElementById('tradeFilter').value;
+            filteredTrades = allTrades.filter(t => {
+                const net = getNetPnL(t); // Filter by Net
+                return (t.symbol.toLowerCase().includes(q) || t.notes?.toLowerCase().includes(q)) && 
+                       (type===''?true:type==='win'?net>0:net<0);
+            });
+            displayTrades(1); // Always reset to page 1 on new search
         }
 
         // --- REVIEW MODAL LOGIC ---
@@ -1334,10 +1361,8 @@
 
         function closeModal(modalId) {
             document.getElementById(modalId).classList.add('hidden');
-            // Check if Day Modal is still open (nested scenario)
             if(modalId === 'tradeModal' && !document.getElementById('dayModal').classList.contains('hidden')) {
                 activeModalId = 'dayModal';
-                // Do NOT re-enable scrolling
             } else {
                 document.body.style.overflow = '';
                 activeModalId = null;
@@ -1376,7 +1401,7 @@
             document.getElementById('m_pnl').textContent = pnlFormatted;
             document.getElementById('m_pnl').className = `text-3xl font-bold leading-none mt-1 font-mono ${pnl>=0?'text-green-400 text-glow-green':'text-red-400 text-glow-red'}`;
             
-            // Mobile PnL (This ID *does* exist in your HTML, so we keep it)
+            // Mobile PnL 
             const mobPnl = document.getElementById('m_pnl_mob');
             if(mobPnl) {
                 mobPnl.textContent = pnlFormatted;
@@ -1387,18 +1412,15 @@
             document.getElementById('m_exit_price').textContent = parseFloat(t.exit_price).toFixed(2);
             document.getElementById('m_setup').textContent = t.setup || '-';
             
-            // Dynamic Session injected here
             document.getElementById('m_session').textContent = determineSession(t.entry_time);
             
             document.getElementById('m_score').textContent = t.score || t['Total Score'] || '-';
             
-            // Fees Fix: Remove the double sign format (-+$X.XX)
             const feesVal = Math.abs(parseMoneyValue(t.fees||0));
             document.getElementById('m_fees').textContent = feesVal > 0 ? `-$${feesVal.toFixed(2)}` : '$0.00';
             
             document.getElementById('m_notes').textContent = t.notes || 'No notes recorded.';
 
-            // Image Logic
             const {full} = driveUrls(t.screenshot||t.screenshot_url_A);
             const img=document.getElementById('m_image'), no=document.getElementById('m_no_image'), lnk=document.getElementById('m_full_link');
             if(full){ 
@@ -1413,13 +1435,12 @@
                 lnk.classList.add('opacity-0'); 
             }
 
-            // Tags Logic updated to match requested styles
             const setTag = (id, v) => {
                 const el = document.getElementById(id);
                 if (!el) return;
                 el.textContent = v || '-';
                 
-                let style = 'badge badge-gray'; // Default
+                let style = 'badge badge-gray'; 
                 if (!v) { el.className = style; return; }
                 
                 const val = v.toLowerCase();
@@ -1432,7 +1453,7 @@
                 } else if (val.includes('error')) {
                     style = 'badge badge-dark';
                 } else if (val.includes('minor deviation') || val.includes('partial prep')) {
-                    style = 'badge badge-gray'; // explicit just in case
+                    style = 'badge badge-gray';
                 }
                 
                 el.className = style;
@@ -1444,27 +1465,22 @@
             setTag('m_tag_exit', t.trade_exit);
         }
 
-        window.filterTrades = () => {
-            const q = document.getElementById('tradeSearch').value.toLowerCase();
-            const type = document.getElementById('tradeFilter').value;
-            filteredTrades = allTrades.filter(t => {
-                const net = getNetPnL(t); // Filter by Net
-                return (t.symbol.toLowerCase().includes(q) || t.notes?.toLowerCase().includes(q)) && 
-                       (type===''?true:type==='win'?net>0:net<0);
-            });
-            displayTrades(1);
-        }
-
+        // --- CHART DYNAMIC SCROLLING UPDATE ---
         window.switchEquityView = (mode) => {
             const d = mode==='days' ? rawData.equityDays : rawData.equityTrades;
             const labels = d.map(x => mode==='days' ? x.date : 'T'+x.trade);
             
+            // Calculate dynamic width based on the amount of data
+            // This ensures long chart history expands natively across your screen rather than squashing!
+            const dynamicWidth = Math.max(800, labels.length * 25);
+            document.getElementById('equityChartContainer').style.minWidth = `${dynamicWidth}px`;
+            document.getElementById('drawdownChartContainer').style.minWidth = `${dynamicWidth}px`;
+
             // 1. Update Equity Chart
             equityChart.data.labels = labels;
             equityChart.data.datasets[0].data = d.map(x => x.equity);
             equityChart.options.plugins.dayDivider.mode = mode;
             equityChart.data.datasets[0].customData = d;
-            if(equityChart.resetZoom) equityChart.resetZoom();
             equityChart.update();
             
             // 2. Update Drawdown Chart
@@ -1477,7 +1493,6 @@
             drawdownChart.data.datasets[0].data = ddVals;
             drawdownChart.options.plugins.dayDivider.mode = mode;
             drawdownChart.data.datasets[0].customData = d;
-            if(drawdownChart.resetZoom) drawdownChart.resetZoom();
             drawdownChart.update();
             
             // Update UI buttons
