@@ -1067,7 +1067,7 @@
             renderCalendar();
         }
 
-        // --- CUSTOM PLUGIN: DRAW VERTICAL LINE PER DAY (UPDATED) ---
+        // --- CUSTOM PLUGIN: DRAW VERTICAL LINE PER DAY ---
         const dayDividerPlugin = {
             id: 'dayDivider',
             beforeDraw: (chart) => {
@@ -1123,7 +1123,7 @@
             }
         };
 
-        // --- COMBINED CHART LOGIC (UPDATED) ---
+        // --- COMBINED CHART LOGIC ---
         function initCharts() {
             Chart.defaults.color='#6b7280';
             Chart.defaults.borderColor='#1f1f1f';
@@ -1169,9 +1169,9 @@
                         {
                             // Dataset 1: Drawdown
                             label: 'Drawdown',
-                            yAxisID: 'y1',
+                            yAxisID: 'y', // Mapped to MAIN Axis to force shared scale/alignment
                             data: [],
-                            fill: { target: 'origin', below: 'rgba(244, 63, 94, 0.05)' },
+                            fill: { target: { value: rawData.startingBalance }, below: 'rgba(244, 63, 94, 0.05)' },
                             borderColor: 'rgba(244, 63, 94, 0.3)',
                             borderWidth: 1,
                             pointRadius: 0,
@@ -1192,22 +1192,26 @@
                             zoom: { wheel: { enabled: true, speed: 0.1 }, pinch: { enabled: true }, mode: 'x' } 
                         },
                         tooltip: { 
-                            enabled: window.innerWidth >= 768, // DISABLES TOOLTIP ON MOBILE
+                            enabled: window.innerWidth >= 768, // Disable tooltip on mobile
                             mode:'index', intersect:false, backgroundColor: '#111', titleColor: '#fff', bodyColor: '#ccc', borderColor: '#333', borderWidth: 1,
                             callbacks: {
                                 label: function(context) {
                                     let label = context.dataset.label || '';
                                     if (label) label += ': ';
-                                    label += formatMoney(context.raw);
-                                    return label;
+                                    
+                                    // If this is Drawdown, we show the actual negative number, not the "shifted" 50k number
+                                    if(context.datasetIndex === 1) {
+                                        const originalDD = context.raw - rawData.startingBalance;
+                                        return label + formatMoney(originalDD);
+                                    }
+                                    return label + formatMoney(context.raw);
                                 }
                             }
                         } 
                     },
                     scales: { 
                         x: { grid:{display:false} }, 
-                        y: { border:{display:false}, grid:{color:'#1a1a1a'} }, // Equity scale
-                        y1: { position: 'right', display: false, max: 0 } // Drawdown scale (max 0 forces it to hang from top)
+                        y: { border:{display:false}, grid:{color:'#1a1a1a'} } // Main shared axis
                     },
                     interaction: { mode: 'nearest', axis: 'x', intersect: false }
                 }
@@ -1261,7 +1265,7 @@
                 
                 ddDataset.borderWidth = 1;
                 ddDataset.borderColor = 'rgba(244, 63, 94, 0.3)';
-                ddDataset.fill = { target: 'origin', below: 'rgba(244, 63, 94, 0.05)' };
+                ddDataset.fill = { target: { value: rawData.startingBalance }, below: 'rgba(244, 63, 94, 0.05)' };
                 ddDataset.order = 1; 
             } else {
                 eqDataset.borderWidth = 1;
@@ -1270,7 +1274,7 @@
                 
                 ddDataset.borderWidth = 2;
                 ddDataset.borderColor = 'rgba(244, 63, 94, 1)';
-                ddDataset.fill = { target: 'origin', below: 'rgba(244, 63, 94, 0.2)' };
+                ddDataset.fill = { target: { value: rawData.startingBalance }, below: 'rgba(244, 63, 94, 0.2)' };
                 ddDataset.order = 2; // Brings Drawdown strongly forward visually
             }
             
@@ -1303,11 +1307,12 @@
             const d = mode==='days' ? rawData.equityDays : rawData.equityTrades;
             const labels = d.map(x => mode==='days' ? x.date : 'T'+x.trade);
             
-            // Calculate Drawdown
+            // Calculate Drawdown RELATIVE TO STARTING BALANCE (50k)
             let currentPeak = STARTING_BALANCE;
             const ddVals = d.map(x => {
                 if(x.equity > currentPeak) currentPeak = x.equity;
-                return x.equity - currentPeak; 
+                // Shift the drawdown to start at 50k line
+                return STARTING_BALANCE + (x.equity - currentPeak); 
             });
 
             combinedChart.data.labels = labels;
