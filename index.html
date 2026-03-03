@@ -182,6 +182,31 @@
         .btn-tech.active { background: #222; border-color: var(--accent-green); color: var(--accent-green); box-shadow: 0 0 10px rgba(16, 185, 129, 0.1); }
         .btn-tech:disabled { opacity: 0.5; cursor: not-allowed; }
 
+        /* --- Subtle Segmented Toggle Switch --- */
+        .toggle-container { 
+            background: rgba(0, 0, 0, 0.4); 
+            border: 1px solid #1f1f1f; 
+            border-radius: 8px; 
+            padding: 4px; 
+            display: inline-flex; 
+            gap: 4px; 
+        }
+        .btn-toggle { 
+            background: transparent; 
+            border: 1px solid transparent; 
+            padding: 4px 12px; 
+            border-radius: 6px; 
+            font-size: 0.7rem; 
+            font-weight: 600; 
+            letter-spacing: 0.05em; 
+            text-transform: uppercase; 
+            color: #6b7280; 
+            transition: all 0.2s ease; 
+            cursor: pointer;
+        }
+        .btn-toggle:hover:not(.active) { color: #d1d5db; background: rgba(255,255,255,0.03); }
+        .btn-toggle.active { background: #1a1a1a; color: #e5e7eb; border-color: #333; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+
         /* Animations */
         @keyframes fadeInUp {
             from { opacity: 0; transform: translateY(20px); }
@@ -418,16 +443,16 @@
                     </span>
                 </h2>
                 
-                <div class="flex flex-wrap gap-2">
+                <div class="flex flex-wrap gap-3">
                     <!-- The Focus Toggle -->
-                    <div class="flex space-x-1 bg-[#1a1a1a] p-1 rounded-lg border border-[#333]">
-                        <button id="focusEquityBtn" class="btn-tech active" onclick="setChartFocus('equity')">Focus: Equity</button>
-                        <button id="focusDrawdownBtn" class="btn-tech" onclick="setChartFocus('drawdown')">Focus: Drawdown</button>
+                    <div class="toggle-container">
+                        <button id="focusEquityBtn" class="btn-toggle active" onclick="setChartFocus('equity')">Focus: Equity</button>
+                        <button id="focusDrawdownBtn" class="btn-toggle" onclick="setChartFocus('drawdown')">Focus: Drawdown</button>
                     </div>
                     <!-- The Mode Toggle -->
-                    <div class="flex space-x-1 bg-[#1a1a1a] p-1 rounded-lg border border-[#333]">
-                        <button id="equityByTrades" class="btn-tech active" onclick="switchEquityView('trades')">Trades</button>
-                        <button id="equityByDays" class="btn-tech" onclick="switchEquityView('days')">Days</button>
+                    <div class="toggle-container">
+                        <button id="equityByTrades" class="btn-toggle active" onclick="switchEquityView('trades')">Trades</button>
+                        <button id="equityByDays" class="btn-toggle" onclick="switchEquityView('days')">Days</button>
                     </div>
                 </div>
             </div>
@@ -571,7 +596,7 @@
         const STARTING_BALANCE = 50000;
 
         // ════ STATE ════
-        let rawData = {}, allTrades = [], filteredTrades = [], allReviews = [];
+        let rawData = {}, allTrades = [], filteredTrades = [], allReviews =[];
         let currentPage = 1, tradesPerPage = 15;
         let combinedChart, timeChart, symbolChart, weekdayChart;
         let activeModalId = null, currentTradeIndex = -1, currentReviewIndex = -1;
@@ -630,7 +655,7 @@
                 let sorted = [...(data.trades || [])].sort((a,b) => new Date(a.date+' '+a.entry_time) - new Date(b.date+' '+b.entry_time));
                 
                 let b = STARTING_BALANCE;
-                const eqT = [{trade:0, equity:b, date:'Start'}];
+                const eqT =[{trade:0, equity:b, date:'Start'}];
                 const dMap = new Map();
 
                 sorted = sorted.map((t, i) => {
@@ -644,10 +669,10 @@
                 allTrades = sorted.reverse();
                 filteredTrades = [...allTrades];
                 
-                allReviews = (data.reviews || []).sort((a,b) => new Date(b.date) - new Date(a.date));
+                allReviews = (data.reviews ||[]).sort((a,b) => new Date(b.date) - new Date(a.date));
 
                 let db = STARTING_BALANCE;
-                const eqD = [{day:0, equity:db, date:'Start'}];
+                const eqD =[{day:0, equity:db, date:'Start'}];
                 Array.from(dMap.entries()).sort((a,b)=>new Date(a[0])-new Date(b[0])).forEach((e,i)=>{
                     db+=e[1];
                     eqD.push({day:i+1,equity:db,date:e[0]});
@@ -860,7 +885,7 @@
         }
 
         function buildInsights() {
-            const i = rawData.insights || [];
+            const i = rawData.insights ||[];
             if(i.length) document.getElementById('insightsContainer').innerHTML = `<div class="tech-card rounded-xl p-6 md:p-8">
                 <h2 class="text-lg font-semibold mb-6 tracking-wide text-gray-200">Algorithm Insights</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -881,7 +906,7 @@
             const pf = grossLoss > 0 ? grossWin/grossLoss : grossWin;
             const curBal = rawData.startingBalance + net;
 
-            const m = [
+            const m =[
                 {l:'Net Profit', v:formatMoney(net), c:net>=0?'text-green-400 text-glow-green':'text-red-400 text-glow-red', mono:true},
                 {l:'Win Rate', v:wr.toFixed(2)+'%', c:wr>=50?'text-green-400':'text-red-400', visual:true, p:wr, mono:true},
                 {l:'Avg Net P&L', v:formatMoney(t.length?net/t.length:0), c:net>=0?'text-green-400':'text-red-400', mono:true},
@@ -928,7 +953,7 @@
                 if(dd > maxDD) maxDD = dd;
             });
 
-            let streakHtml = [];
+            let streakHtml =[];
             const recent = t.slice(0, 5).reverse();
             for(let i = 0; i < recent.length; i++) {
                 const p = getNetPnL(recent[i]);
@@ -937,7 +962,7 @@
                 else streakHtml.push('<span class="text-gray-500 mx-1 font-mono">B</span>');
             }
 
-            const rows = [
+            const rows =[
                 {l:'Total Number of Trades', v:t.length, mono:true},
                 {l:'Avg. Net Profit per Trade', v:formatMoney(avgPL), c:avgPL>=0?'text-green-400':'text-red-400', mono:true},
                 {l:'Biggest Winner (Net)', v:formatMoney(biggestWinner), c:'text-green-400', mono:true},
@@ -962,7 +987,7 @@
 
         let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
         function renderCalendar() {
-            const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            const mNames =['January','February','March','April','May','June','July','August','September','October','November','December'];
             document.getElementById('calendarMonthYear').textContent = `${mNames[calMonth]} ${calYear}`;
             
             const firstDay = new Date(calYear, calMonth, 1).getDay();
@@ -1132,10 +1157,10 @@
             const ctx = document.getElementById('combinedChart').getContext('2d');
             combinedChart = new Chart(ctx, {
                 type: 'line',
-                plugins: [dayDividerPlugin], 
+                plugins:[dayDividerPlugin], 
                 data: {
                     labels: [],
-                    datasets: [
+                    datasets:[
                         {
                             // Dataset 0: Equity
                             label: 'Net Equity',
@@ -1170,7 +1195,7 @@
                             // Dataset 1: Drawdown
                             label: 'Drawdown',
                             yAxisID: 'y', // Mapped to MAIN Axis to force shared scale/alignment
-                            data: [],
+                            data:[],
                             fill: { target: { value: rawData.startingBalance }, below: 'rgba(244, 63, 94, 0.05)' },
                             borderColor: 'rgba(244, 63, 94, 0.3)',
                             borderWidth: 1,
@@ -1252,8 +1277,8 @@
         // --- NEW: FOCUS TOGGLE ---
         window.setChartFocus = (focus) => {
             chartFocus = focus;
-            document.getElementById('focusEquityBtn').className = focus === 'equity' ? 'btn-tech active' : 'btn-tech';
-            document.getElementById('focusDrawdownBtn').className = focus === 'drawdown' ? 'btn-tech active' : 'btn-tech';
+            document.getElementById('focusEquityBtn').className = focus === 'equity' ? 'btn-toggle active' : 'btn-toggle';
+            document.getElementById('focusDrawdownBtn').className = focus === 'drawdown' ? 'btn-toggle active' : 'btn-toggle';
             
             const eqDataset = combinedChart.data.datasets[0];
             const ddDataset = combinedChart.data.datasets[1];
@@ -1326,8 +1351,8 @@
             applySmartWindowScale();
             
             // Update UI buttons
-            document.getElementById('equityByTrades').className = mode==='trades'?'btn-tech active':'btn-tech';
-            document.getElementById('equityByDays').className = mode==='days'?'btn-tech active':'btn-tech';
+            document.getElementById('equityByTrades').className = mode==='trades'?'btn-toggle active':'btn-toggle';
+            document.getElementById('equityByDays').className = mode==='days'?'btn-toggle active':'btn-toggle';
         }
 
         function displayTrades(page=1) {
@@ -1342,9 +1367,9 @@
                 const balance = t.runningBalance || 0;
                 
                 return `<tr class="trade-row border-b border-[#1a1a1a] transition-all hover:bg-[#111]" onclick="openTradeModal('${t.trade_id}')">
-                    <td class="py-4 px-5 text-left font-mono text-xs text-blue-400 font-bold hover:underline tracking-wide">${t.trade_id}</td>
+                    <td class="py-4 px-5 text-left font-mono text-xs text-gray-400 hover:text-white transition-colors tracking-wide">${t.trade_id}</td>
                     <td class="py-4 px-5 text-left text-xs text-gray-400 font-mono">${t.date}</td>
-                    <td class="py-4 px-5 text-left text-sm font-bold text-gray-200">${t.symbol}</td>
+                    <td class="py-4 px-5 text-left text-xs text-gray-400 font-mono">${t.symbol}</td>
                     <td class="py-4 px-5 text-left hide-mobile"><span class="badge ${t.side?.toLowerCase().includes('long')?'badge-green':'badge-red'}">${t.side}</span></td>
                     <td class="py-4 px-5 text-left hide-mobile text-xs text-gray-400 font-mono">${parseFloat(t.entry_price).toFixed(2)}</td>
                     <td class="py-4 px-5 text-left hide-mobile text-xs text-gray-400 font-mono">${parseFloat(t.exit_price).toFixed(2)}</td>
